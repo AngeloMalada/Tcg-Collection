@@ -1,0 +1,26 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Millennium Puzzle inverted golden pyramid -->
+    <path
+        android:fillColor="#F0C84B"
+        android:pathData="M2,4 L22,4 L12,22 Z" />
+    <path
+        android:fillColor="#B8860B"
+        android:pathData="M12,4 L22,4 L12,22 Z" />
+    <path
+        android:fillColor="#1A1330"
+        android:pathData="M6.2,7.2 C8.8,5.6 15.2,5.6 17.8,7.2 C15.2,10.2 8.8,10.2 6.2,7.2 Z" />
+    <!-- Millennium Eye pupil -->
+    <path
+        android:fillColor="#9E7BFF"
+        android:pathData="M12,6.4 A1.7,1.7 0 1,0 12,9.8 A1.7,1.7 0 1,0 12,6.4 Z" />
+    <path
+        android:fillColor="#F0C84B"
+        android:pathData="M12,10.2 L12,15.5 M10.2,11.6 L12,14 L13.8,11.6"
+        android:strokeColor="#1A1330"
+        android:strokeWidth="1.2"
+        android:strokeLineCap="round" />
+</vector>
