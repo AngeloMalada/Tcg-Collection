@@ -51,6 +51,8 @@ class TcgRepository(
         dao.pruneReplacedMtgSeedStubs()
         dao.pruneReplacedSeedPrecons()
         dao.pruneOrphanedPreconCards()
+        dao.decodeHtmlEntitiesInSets()
+        dao.decodeHtmlEntitiesInPrecons()
     }
 
     fun observeSets(game: TcgGame?, query: String): Flow<List<SetWithProgress>> =
