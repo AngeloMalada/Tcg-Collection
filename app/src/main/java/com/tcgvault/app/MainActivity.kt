@@ -39,7 +39,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -66,7 +65,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.tcgvault.app.data.remote.UpdateDownloadState
 import com.tcgvault.app.ui.components.TopLeftGameSelector
 import com.tcgvault.app.ui.screens.CollectionScreen
 import com.tcgvault.app.ui.screens.SetDetailScreen
@@ -122,6 +120,7 @@ private fun TcgVaultRoot(viewModel: TcgViewModel) {
     val snackbarHostState = remember { SnackbarHostState() }
 
     val selectedGame by viewModel.selectedGame.collectAsState()
+    val selectedCategory by viewModel.selectedCategory.collectAsState()
     val setsQuery by viewModel.setsQuery.collectAsState()
     val sets by viewModel.sets.collectAsState()
     val isSyncing by viewModel.isSyncingCatalog.collectAsState()
@@ -145,7 +144,6 @@ private fun TcgVaultRoot(viewModel: TcgViewModel) {
 
     val statusBanner by viewModel.statusBanner.collectAsState()
     val availableUpdate by viewModel.availableUpdate.collectAsState()
-    val updateDownloadState by viewModel.updateDownloadState.collectAsState()
     val context = LocalContext.current
 
     LaunchedEffect(statusBanner) {
@@ -271,6 +269,7 @@ private fun TcgVaultRoot(viewModel: TcgViewModel) {
                 composable(TopLevelTab.SETS.route) {
                     SetsScreen(
                         selectedGame = selectedGame,
+                        selectedCategory = selectedCategory,
                         sets = sets,
                         precons = precons,
                         activePreconCards = activePreconCards,
@@ -278,6 +277,7 @@ private fun TcgVaultRoot(viewModel: TcgViewModel) {
                         addingPreconId = addingPreconId,
                         query = setsQuery,
                         isSyncing = isSyncing,
+                        onSelectCategory = viewModel::selectCategory,
                         onQueryChange = viewModel::updateSetsQuery,
                         onSetClick = { setId ->
                             viewModel.openSet(setId)
@@ -337,7 +337,6 @@ private fun TcgVaultRoot(viewModel: TcgViewModel) {
     }
 
     availableUpdate?.let { update ->
-        val dlState = updateDownloadState
         AlertDialog(
             onDismissRequest = viewModel::dismissUpdateDialog,
             containerColor = VaultSurface,
@@ -374,116 +373,40 @@ private fun TcgVaultRoot(viewModel: TcgViewModel) {
                             text = update.releaseNotes,
                             style = MaterialTheme.typography.bodyMedium,
                             color = TextSecondary,
-                            maxLines = 5,
+                            maxLines = 6,
                             overflow = TextOverflow.Ellipsis
                         )
-                    }
-
-                    when (dlState) {
-                        is UpdateDownloadState.Downloading -> {
-                            val pct = (dlState.progress * 100).toInt()
-                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                LinearProgressIndicator(
-                                    progress = { dlState.progress },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(4.dp),
-                                    color = VaultEmerald,
-                                    trackColor = VaultSurfaceElevated
-                                )
-                                Text(
-                                    text = "Downloading update… $pct%",
-                                    fontFamily = MonoFont,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = TextSecondary
-                                )
-                            }
-                        }
-
-                        is UpdateDownloadState.ReadyToInstall -> {
-                            Text(
-                                text = if (dlState.needsPermission) {
-                                    "Allow 'Install unknown apps' in Settings, then tap Install Update."
-                                } else {
-                                    "Update downloaded. Tap Install Update to apply."
-                                },
-                                style = MaterialTheme.typography.labelMedium,
-                                color = VaultEmerald
-                            )
-                        }
-
-                        is UpdateDownloadState.Error -> {
-                            Text(
-                                text = dlState.message,
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        }
-
-                        UpdateDownloadState.Idle -> Unit
+                    } else {
+                        Text(
+                            text = "A newer version has been published on GitHub.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextSecondary
+                        )
                     }
                 }
             },
             confirmButton = {
-                when (dlState) {
-                    is UpdateDownloadState.Downloading -> {
-                        Button(
-                            onClick = {},
-                            enabled = false,
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text("Downloading…", fontWeight = FontWeight.SemiBold)
-                        }
-                    }
-
-                    is UpdateDownloadState.ReadyToInstall -> {
-                        Button(
-                            onClick = { viewModel.triggerDownloadedUpdateInstall(context) },
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = VaultAccentWhite,
-                                contentColor = VaultBackground
-                            )
-                        ) {
-                            Text("Install Update", fontWeight = FontWeight.SemiBold)
-                        }
-                    }
-
-                    is UpdateDownloadState.Idle,
-                    is UpdateDownloadState.Error -> {
-                        Button(
-                            onClick = {
-                                if (update.hasDirectApk) {
-                                    viewModel.startInAppUpdate(context)
-                                } else {
-                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(update.downloadUrl))
-                                    context.startActivity(intent)
-                                    viewModel.dismissUpdateDialog()
-                                }
-                            },
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = VaultAccentWhite,
-                                contentColor = VaultBackground
-                            )
-                        ) {
-                            Text(
-                                text = when {
-                                    dlState is UpdateDownloadState.Error -> "Retry"
-                                    update.hasDirectApk -> "Update Now"
-                                    else -> "View Release"
-                                },
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    }
+                Button(
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(update.downloadUrl))
+                        context.startActivity(intent)
+                        viewModel.dismissUpdateDialog()
+                    },
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = VaultAccentWhite,
+                        contentColor = VaultBackground
+                    )
+                ) {
+                    Text(
+                        text = if (update.hasDirectApk) "Download Update" else "View Release",
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
             },
             dismissButton = {
-                if (dlState !is UpdateDownloadState.Downloading) {
-                    TextButton(onClick = viewModel::dismissUpdateDialog) {
-                        Text("Later", color = TextSecondary)
-                    }
+                TextButton(onClick = viewModel::dismissUpdateDialog) {
+                    Text("Later", color = TextSecondary)
                 }
             }
         )

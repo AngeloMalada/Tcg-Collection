@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -64,6 +65,7 @@ import com.tcgvault.app.ui.theme.VaultSurfaceElevated
 @Composable
 fun SetsScreen(
     selectedGame: TcgGame,
+    selectedCategory: String?,
     sets: List<SetWithProgress>,
     precons: List<PreconWithSummary>,
     activePreconCards: List<PreconCardDetail>,
@@ -71,6 +73,7 @@ fun SetsScreen(
     addingPreconId: String?,
     query: String,
     isSyncing: Boolean,
+    onSelectCategory: (String?) -> Unit,
     onQueryChange: (String) -> Unit,
     onSetClick: (String) -> Unit,
     onInspectPrecon: (String?) -> Unit,
@@ -80,15 +83,9 @@ fun SetsScreen(
     onToggleSetFavorite: (String) -> Unit,
     onTogglePreconFavorite: (String) -> Unit
 ) {
-    var selectedCategory by remember(selectedGame) {
-        mutableStateOf<String?>(SetCategoryClassifier.defaultCategory(selectedGame))
-    }
     var inspectedPrecon by remember { mutableStateOf<PreconWithSummary?>(null) }
     var showCreatePreconDialog by remember { mutableStateOf(false) }
-
-    LaunchedEffect(selectedGame) {
-        selectedCategory = SetCategoryClassifier.defaultCategory(selectedGame)
-    }
+    val listState = rememberLazyListState()
 
     val setComparator = remember {
         compareByDescending<SetWithProgress> { it.set.isFavorite }
@@ -164,7 +161,7 @@ fun SetsScreen(
                         label = category,
                         count = itemsInCategory.size,
                         selected = selectedCategory == category,
-                        onClick = { selectedCategory = category }
+                        onClick = { onSelectCategory(category) }
                     )
                 }
 
@@ -174,7 +171,7 @@ fun SetsScreen(
                             label = "Universes Beyond",
                             count = universesBeyondSets.size + universesBeyondPrecons.size,
                             selected = isUbSelected,
-                            onClick = { selectedCategory = SetCategoryClassifier.UNIVERSES_BEYOND_CATEGORY }
+                            onClick = { onSelectCategory(SetCategoryClassifier.UNIVERSES_BEYOND_CATEGORY) }
                         )
                     }
                 }
@@ -184,7 +181,7 @@ fun SetsScreen(
                         label = "Precons",
                         count = precons.size,
                         selected = selectedCategory == SetCategoryClassifier.PRECONS_CATEGORY,
-                        onClick = { selectedCategory = SetCategoryClassifier.PRECONS_CATEGORY }
+                        onClick = { onSelectCategory(SetCategoryClassifier.PRECONS_CATEGORY) }
                     )
                 }
 
@@ -193,7 +190,7 @@ fun SetsScreen(
                         label = "All",
                         count = sets.size + precons.size,
                         selected = selectedCategory == null,
-                        onClick = { selectedCategory = null }
+                        onClick = { onSelectCategory(null) }
                     )
                 }
             }
@@ -229,6 +226,7 @@ fun SetsScreen(
             }
         } else {
             LazyColumn(
+                state = listState,
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 contentPadding = PaddingValues(bottom = 24.dp)
             ) {
