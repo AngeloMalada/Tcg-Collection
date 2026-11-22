@@ -83,3 +83,74 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     debugImplementation(libs.androidx.ui.tooling)
 }
+
+val ensureEmulator by tasks.registering {
+    group = "application"
+    description = "Boots an Android emulator if no device is currently connected."
+
+    doLast {
+        val isWindows = System.getProperty("os.name").lowercase().contains("win")
+        val adb = android.adbExecutable.absolutePath
+        val emulatorExe = File(
+            android.sdkDirectory,
+            if (isWindows) "emulator/emulator.exe" else "emulator/emulator"
+        )
+
+        fun runOutput(vararg cmd: String): String {
+            val proc = ProcessBuilder(*cmd).redirectErrorStream(true).start()
+            val out = proc.inputStream.bufferedReader().readText()
+            proc.waitFor()
+            return out
+        }
+
+        val connected = runOutput(adb, "devices")
+            .lineSequence()
+            .drop(1)
+            .any { it.trim().endsWith("\tdevice") }
+
+        if (connected) {
+            logger.lifecycle("Android device/emulator already connected.")
+            return@doLast
+        }
+
+        val requestedAvd = project.findProperty("avd")?.toString()?.takeIf { it.isNotBlank() }
+        val avdName = requestedAvd ?: runOutput(emulatorExe.absolutePath, "-list-avds")
+            .lineSequence()
+            .map { it.trim() }
+            .firstOrNull { it.isNotEmpty() }
+            ?: error("No Android Virtual Devices (AVDs) found. Create one in Android Studio Device Manager.")
+
+        logger.lifecycle("Starting emulator '$avdName'...")
+        ProcessBuilder(emulatorExe.absolutePath, "-avd", avdName)
+            .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+            .redirectError(ProcessBuilder.Redirect.DISCARD)
+            .start()
+
+        runOutput(adb, "wait-for-device")
+        repeat(90) {
+            if (runOutput(adb, "shell", "getprop", "sys.boot_completed").trim() == "1") {
+                return@doLast
+            }
+            Thread.sleep(2000)
+        }
+        error("Timed out waiting for emulator '$avdName' to finish booting.")
+    }
+}
+
+tasks.matching { it.name == "installDebug" }.configureEach {
+    mustRunAfter(ensureEmulator)
+}
+
+tasks.register("runDebug") {
+    group = "application"
+    description = "Starts an emulator if needed, installs the debug APK, and launches the app."
+    dependsOn(ensureEmulator, "installDebug")
+
+    doLast {
+        val adb = android.adbExecutable.absolutePath
+        val proc = ProcessBuilder(
+            adb, "shell", "am", "start", "-n", "com.tcgvault.app/.MainActivity"
+        ).inheritIO().start()
+        check(proc.waitFor() == 0) { "Failed to launch com.tcgvault.app/.MainActivity" }
+    }
+}
