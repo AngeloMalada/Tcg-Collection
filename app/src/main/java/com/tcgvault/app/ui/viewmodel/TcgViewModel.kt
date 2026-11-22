@@ -3,6 +3,7 @@ package com.tcgvault.app.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.tcgvault.app.BuildConfig
 import com.tcgvault.app.data.local.model.CardWithCollection
 import com.tcgvault.app.data.local.model.CollectionStats
 import com.tcgvault.app.data.local.model.PreconCardDetail
@@ -10,6 +11,8 @@ import com.tcgvault.app.data.local.model.PreconWithSummary
 import com.tcgvault.app.data.local.model.SetWithProgress
 import com.tcgvault.app.data.model.ReleaseDateFilter
 import com.tcgvault.app.data.model.TcgGame
+import com.tcgvault.app.data.remote.AppUpdateInfo
+import com.tcgvault.app.data.remote.GitHubUpdateChecker
 import com.tcgvault.app.data.repository.TcgRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,7 +44,8 @@ enum class CardSortOrder(val label: String, val shortLabel: String) {
 class TcgViewModel(
     private val repository: TcgRepository,
     initialGame: TcgGame = TcgGame.YUGIOH,
-    private val onGamePersisted: (TcgGame) -> Unit = {}
+    private val onGamePersisted: (TcgGame) -> Unit = {},
+    private val updateChecker: GitHubUpdateChecker = GitHubUpdateChecker()
 ) : ViewModel() {
 
     private val _selectedGame = MutableStateFlow(initialGame)
@@ -87,11 +91,24 @@ class TcgViewModel(
     private val _isLoadingPreconCards = MutableStateFlow(false)
     val isLoadingPreconCards: StateFlow<Boolean> = _isLoadingPreconCards.asStateFlow()
 
+    private val _availableUpdate = MutableStateFlow<AppUpdateInfo?>(null)
+    val availableUpdate: StateFlow<AppUpdateInfo?> = _availableUpdate.asStateFlow()
+
     init {
         viewModelScope.launch {
             repository.ensureSeeded()
             syncCatalogInBackground()
         }
+        viewModelScope.launch {
+            val update = updateChecker.checkForUpdate(BuildConfig.VERSION_NAME)
+            if (update != null) {
+                _availableUpdate.value = update
+            }
+        }
+    }
+
+    fun dismissUpdateDialog() {
+        _availableUpdate.value = null
     }
 
     private suspend fun syncCatalogInBackground() {

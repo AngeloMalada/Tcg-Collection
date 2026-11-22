@@ -1,6 +1,8 @@
 package com.tcgvault.app
 
+import android.content.Intent
 import android.graphics.Color as AndroidColor
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -26,9 +28,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CollectionsBookmark
 import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -38,6 +44,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -46,7 +53,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
@@ -64,8 +73,12 @@ import com.tcgvault.app.ui.theme.SubtleBorder
 import com.tcgvault.app.ui.theme.TcgVaultTheme
 import com.tcgvault.app.ui.theme.TextMuted
 import com.tcgvault.app.ui.theme.TextPrimary
+import com.tcgvault.app.ui.theme.TextSecondary
 import com.tcgvault.app.ui.theme.VaultAccentWhite
 import com.tcgvault.app.ui.theme.VaultBackground
+import com.tcgvault.app.ui.theme.VaultEmerald
+import com.tcgvault.app.ui.theme.VaultSurface
+import com.tcgvault.app.ui.theme.VaultSurfaceElevated
 import com.tcgvault.app.ui.viewmodel.TcgViewModel
 import java.net.URLDecoder
 import java.net.URLEncoder
@@ -128,6 +141,8 @@ private fun TcgVaultRoot(viewModel: TcgViewModel) {
     val setLoadError by viewModel.setLoadError.collectAsState()
 
     val statusBanner by viewModel.statusBanner.collectAsState()
+    val availableUpdate by viewModel.availableUpdate.collectAsState()
+    val context = LocalContext.current
 
     LaunchedEffect(statusBanner) {
         statusBanner?.let { msg ->
@@ -315,5 +330,81 @@ private fun TcgVaultRoot(viewModel: TcgViewModel) {
                 }
             }
         }
+    }
+
+    availableUpdate?.let { update ->
+        AlertDialog(
+            onDismissRequest = viewModel::dismissUpdateDialog,
+            containerColor = VaultSurface,
+            shape = RoundedCornerShape(10.dp),
+            title = {
+                Text(
+                    text = "Update Available",
+                    color = TextPrimary,
+                    fontWeight = FontWeight.SemiBold
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Surface(
+                        color = VaultSurfaceElevated,
+                        shape = RoundedCornerShape(6.dp)
+                    ) {
+                        Text(
+                            text = "v${update.currentVersion} → v${update.latestVersion}",
+                            fontFamily = MonoFont,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = VaultEmerald,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                    Text(
+                        text = update.releaseTitle,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = TextPrimary
+                    )
+                    if (update.releaseNotes.isNotBlank()) {
+                        Text(
+                            text = update.releaseNotes,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextSecondary,
+                            maxLines = 6,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    } else {
+                        Text(
+                            text = "A newer version has been published on GitHub.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextSecondary
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(update.downloadUrl))
+                        context.startActivity(intent)
+                        viewModel.dismissUpdateDialog()
+                    },
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = VaultAccentWhite,
+                        contentColor = VaultBackground
+                    )
+                ) {
+                    Text(
+                        text = if (update.hasDirectApk) "Download APK" else "View Release",
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::dismissUpdateDialog) {
+                    Text("Later", color = TextSecondary)
+                }
+            }
+        )
     }
 }
