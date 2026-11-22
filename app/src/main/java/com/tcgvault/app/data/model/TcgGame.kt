@@ -58,11 +58,14 @@ object SetCategoryClassifier {
         if (name.contains("deck build pack")) return null
         return when {
             name.contains("structure deck") -> "Structure Deck"
-            name.contains("starter deck") || name.contains("starter set") -> "Starter Deck"
+            name.contains("starter deck") ||
+                name.contains("starter set") ||
+                (name.contains("super starter") && !name.contains("power-up pack")) -> "Starter Deck"
+            name.contains("chronicles deck") || name.contains("chronicle deck") -> "Chronicles Deck"
             name.contains("legendary") && name.contains("deck") -> "Legendary Decks"
             name.contains("egyptian god deck") ||
                 name.contains("tactical-try deck") ||
-                name.contains("chronicle deck") -> "Preconstructed Deck"
+                (name.contains("demo deck") && !name.contains("extra pack")) -> "Preconstructed Deck"
             else -> null
         }
     }
@@ -84,6 +87,7 @@ object SetCategoryClassifier {
                 yugiohPreconType(setName) != null ||
                     type.contains("structure") ||
                     type.contains("starter") ||
+                    type.contains("chronicles deck") ||
                     type.contains("legendary deck") ||
                     type.contains("preconstructed") -> "Structure & Starter Decks"
                 type.contains("speed duel") || name.contains("speed duel") -> "Speed Duel"
