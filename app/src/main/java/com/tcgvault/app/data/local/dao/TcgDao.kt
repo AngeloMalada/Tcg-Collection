@@ -233,6 +233,27 @@ interface TcgDao {
     @Query("DELETE FROM precon_decks WHERE id LIKE 'precon:mtg:set:%' AND ownedCount = 0")
     suspend fun deleteUnownedLegacyMtgSetPrecons()
 
+    @Query(
+        """
+        DELETE FROM precon_decks
+        WHERE id IN ('precon:ygo:sdwd', 'precon:ygo:sr14', 'precon:mtg:lcc-veloci', 'precon:mtg:blc-squirrel')
+          AND ownedCount = 0
+          AND EXISTS (
+            SELECT 1 FROM precon_decks p2
+            WHERE p2.game = precon_decks.game
+              AND p2.id != precon_decks.id
+              AND (
+                LOWER(p2.setCode) = LOWER(precon_decks.setCode)
+                OR LOWER(p2.name) = LOWER(precon_decks.name)
+              )
+          )
+        """
+    )
+    suspend fun pruneReplacedSeedPrecons()
+
+    @Query("DELETE FROM precon_cards WHERE preconId NOT IN (SELECT id FROM precon_decks)")
+    suspend fun pruneOrphanedPreconCards()
+
     @Query("UPDATE precon_decks SET deckFileName = :deckFileName WHERE id = :preconId AND (deckFileName IS NULL OR deckFileName = '')")
     suspend fun setPreconDeckFileNameIfMissing(preconId: String, deckFileName: String): Int
 

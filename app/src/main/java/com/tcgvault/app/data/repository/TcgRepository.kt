@@ -49,6 +49,8 @@ class TcgRepository(
             }
         }
         dao.pruneReplacedMtgSeedStubs()
+        dao.pruneReplacedSeedPrecons()
+        dao.pruneOrphanedPreconCards()
     }
 
     fun observeSets(game: TcgGame?, query: String): Flow<List<SetWithProgress>> =
@@ -141,6 +143,8 @@ class TcgRepository(
             )
         }
         dao.insertPreconsIgnore(ygoPrecons)
+        dao.pruneReplacedSeedPrecons()
+        dao.pruneOrphanedPreconCards()
         totalInserted += ygoSets.size
 
         totalInserted
