@@ -8,5 +8,9 @@
 /captures/
 .externalNativeBuild/
 .cxx/
+keystore/
+keystore.properties
+*.jks
+*.keystore
 
 .vscode/
