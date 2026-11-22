@@ -25,8 +25,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
@@ -39,12 +39,10 @@ import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -58,6 +56,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -67,10 +67,14 @@ import coil.compose.AsyncImage
 import com.tcgvault.app.R
 import com.tcgvault.app.data.local.model.CardWithCollection
 import com.tcgvault.app.data.model.TcgGame
+import com.tcgvault.app.ui.theme.MonoFont
 import com.tcgvault.app.ui.theme.MtgAccent
 import com.tcgvault.app.ui.theme.SubtleBorder
+import com.tcgvault.app.ui.theme.TextMuted
 import com.tcgvault.app.ui.theme.TextPrimary
 import com.tcgvault.app.ui.theme.TextSecondary
+import com.tcgvault.app.ui.theme.VaultAccentWhite
+import com.tcgvault.app.ui.theme.VaultBackground
 import com.tcgvault.app.ui.theme.VaultEmerald
 import com.tcgvault.app.ui.theme.VaultGold
 import com.tcgvault.app.ui.theme.VaultSurface
@@ -89,8 +93,8 @@ fun rarityColor(game: TcgGame, rarity: String): Color {
             r.contains("mythic") -> Color(0xFFF06428)     // Mythic Orange-Red
             r.contains("rare") -> Color(0xFFE5B94C)       // Rare Gold
             r.contains("uncommon") -> Color(0xFFA8C2D8)   // Uncommon Silver
-            r.contains("special") || r.contains("bonus") || r.contains("timeshifted") -> Color(0xFFB884FF) // Timeshifted Purple
-            else -> Color(0xFFC8CEDF)                     // Common Light Gray/White
+            r.contains("special") || r.contains("bonus") || r.contains("timeshifted") -> Color(0xFFB884FF)
+            else -> Color(0xFFD4D4D8)                     // Common Light Gray
         }
 
         TcgGame.YUGIOH -> when {
@@ -98,33 +102,33 @@ fun rarityColor(game: TcgGame, rarity: String): Color {
             r.contains("secret") || r.contains("collector") || r.contains("ultimate") -> Color(0xFFC084FC)
             r.contains("ultra") -> Color(0xFFE5B94C)
             r.contains("super") -> Color(0xFF93C5FD)
-            r.contains("rare") -> Color(0xFFC8CEDF)
-            else -> TextSecondary
+            r.contains("rare") -> Color(0xFFD4D4D8)
+            else -> TextMuted
         }
     }
 }
 
 @Composable
 fun GameBadge(game: TcgGame, modifier: Modifier = Modifier) {
-    val accent = gameAccentColor(game)
     Surface(
         modifier = modifier,
-        color = accent.copy(alpha = 0.16f),
-        shape = RoundedCornerShape(6.dp),
-        border = BorderStroke(1.dp, accent.copy(alpha = 0.45f))
+        color = VaultSurfaceElevated,
+        shape = RoundedCornerShape(4.dp),
+        border = BorderStroke(1.dp, SubtleBorder)
     ) {
         Text(
             text = game.shortName,
-            color = accent,
+            color = TextSecondary,
+            fontFamily = MonoFont,
             style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
         )
     }
 }
 
 @Composable
-fun GameLogo(game: TcgGame, sizeDp: Int = 20, modifier: Modifier = Modifier) {
+fun GameLogo(game: TcgGame, sizeDp: Int = 18, modifier: Modifier = Modifier) {
     val resId = when (game) {
         TcgGame.YUGIOH -> R.drawable.ic_game_yugioh
         TcgGame.MTG -> R.drawable.ic_game_mtg
@@ -140,26 +144,16 @@ fun GameLogo(game: TcgGame, sizeDp: Int = 20, modifier: Modifier = Modifier) {
 fun FavoriteStarButton(
     isFavorite: Boolean,
     onClick: () -> Unit,
-    sizeDp: Int = 28,
+    sizeDp: Int = 26,
     modifier: Modifier = Modifier
 ) {
-    val bgColor by animateColorAsState(
-        targetValue = if (isFavorite) VaultGold.copy(alpha = 0.18f) else VaultSurfaceElevated,
-        animationSpec = tween(220),
-        label = "favBg"
-    )
-    val borderColor by animateColorAsState(
-        targetValue = if (isFavorite) VaultGold.copy(alpha = 0.7f) else SubtleBorder,
-        animationSpec = tween(220),
-        label = "favBorder"
-    )
     val tintColor by animateColorAsState(
-        targetValue = if (isFavorite) VaultGold else TextSecondary,
-        animationSpec = tween(220),
+        targetValue = if (isFavorite) VaultGold else TextMuted,
+        animationSpec = tween(200),
         label = "favTint"
     )
     val starScale by animateFloatAsState(
-        targetValue = if (isFavorite) 1.12f else 1.0f,
+        targetValue = if (isFavorite) 1.15f else 1.0f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessMedium
@@ -167,25 +161,21 @@ fun FavoriteStarButton(
         label = "favScale"
     )
 
-    Surface(
+    Box(
         modifier = modifier
             .size(sizeDp.dp)
-            .clip(CircleShape)
+            .clip(RoundedCornerShape(6.dp))
             .clickable(onClick = onClick),
-        shape = CircleShape,
-        color = bgColor,
-        border = BorderStroke(1.dp, borderColor)
+        contentAlignment = Alignment.Center
     ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(
-                imageVector = if (isFavorite) Icons.Filled.Star else Icons.Outlined.StarOutline,
-                contentDescription = if (isFavorite) "Remove favorite" else "Favorite",
-                tint = tintColor,
-                modifier = Modifier
-                    .size((sizeDp * 0.6f).dp)
-                    .scale(starScale)
-            )
-        }
+        Icon(
+            imageVector = if (isFavorite) Icons.Filled.Star else Icons.Outlined.StarOutline,
+            contentDescription = if (isFavorite) "Remove favorite" else "Favorite",
+            tint = tintColor,
+            modifier = Modifier
+                .size((sizeDp * 0.72f).dp)
+                .scale(starScale)
+        )
     }
 }
 
@@ -194,18 +184,18 @@ fun AnimatedCounterText(
     count: Int,
     style: androidx.compose.ui.text.TextStyle,
     color: Color,
-    fontWeight: FontWeight = FontWeight.Bold,
+    fontWeight: FontWeight = FontWeight.SemiBold,
     suffix: String = ""
 ) {
     AnimatedContent(
         targetState = count,
         transitionSpec = {
             if (targetState > initialState) {
-                (slideInVertically { it / 2 } + fadeIn(tween(160))) togetherWith
-                    (slideOutVertically { -it / 2 } + fadeOut(tween(120)))
+                (slideInVertically { it / 2 } + fadeIn(tween(150))) togetherWith
+                    (slideOutVertically { -it / 2 } + fadeOut(tween(110)))
             } else {
-                (slideInVertically { -it / 2 } + fadeIn(tween(160))) togetherWith
-                    (slideOutVertically { it / 2 } + fadeOut(tween(120)))
+                (slideInVertically { -it / 2 } + fadeIn(tween(150))) togetherWith
+                    (slideOutVertically { it / 2 } + fadeOut(tween(110)))
             }
         },
         label = "counterRoll"
@@ -213,6 +203,7 @@ fun AnimatedCounterText(
         Text(
             text = "$value$suffix",
             style = style,
+            fontFamily = MonoFont,
             fontWeight = fontWeight,
             color = color
         )
@@ -226,11 +217,6 @@ fun TopLeftGameSelector(
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val activeAccent by animateColorAsState(
-        targetValue = gameAccentColor(selected),
-        animationSpec = tween(260),
-        label = "gameAccent"
-    )
     val chevronRotation by animateFloatAsState(
         targetValue = if (expanded) 180f else 0f,
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
@@ -240,22 +226,22 @@ fun TopLeftGameSelector(
     Box(modifier = modifier) {
         Surface(
             modifier = Modifier
-                .clip(RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(8.dp))
                 .clickable { expanded = true },
-            color = VaultSurfaceElevated,
-            shape = RoundedCornerShape(12.dp),
-            border = BorderStroke(1.dp, activeAccent.copy(alpha = 0.65f))
+            color = VaultSurface,
+            shape = RoundedCornerShape(8.dp),
+            border = BorderStroke(1.dp, SubtleBorder)
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 AnimatedContent(
                     targetState = selected,
                     transitionSpec = {
-                        (fadeIn(tween(200)) + slideInVertically { it / 3 }) togetherWith
-                            (fadeOut(tween(140)) + slideOutVertically { -it / 3 })
+                        (fadeIn(tween(180)) + slideInVertically { it / 3 }) togetherWith
+                            (fadeOut(tween(120)) + slideOutVertically { -it / 3 })
                     },
                     label = "selectedGameContent"
                 ) { game ->
@@ -263,11 +249,11 @@ fun TopLeftGameSelector(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        GameLogo(game = game, sizeDp = 20)
+                        GameLogo(game = game, sizeDp = 18)
                         Text(
                             text = game.displayName,
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.SemiBold,
                             color = TextPrimary
                         )
                     }
@@ -275,9 +261,9 @@ fun TopLeftGameSelector(
                 Icon(
                     imageVector = Icons.Default.KeyboardArrowDown,
                     contentDescription = "Select game",
-                    tint = activeAccent,
+                    tint = TextSecondary,
                     modifier = Modifier
-                        .size(18.dp)
+                        .size(16.dp)
                         .rotate(chevronRotation)
                 )
             }
@@ -289,7 +275,6 @@ fun TopLeftGameSelector(
             modifier = Modifier.background(VaultSurface)
         ) {
             TcgGame.entries.forEach { option ->
-                val optionAccent = gameAccentColor(option)
                 val isSelected = option == selected
                 DropdownMenuItem(
                     text = {
@@ -297,11 +282,11 @@ fun TopLeftGameSelector(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            GameLogo(game = option, sizeDp = 20)
+                            GameLogo(game = option, sizeDp = 18)
                             Text(
                                 text = option.displayName,
-                                color = if (isSelected) optionAccent else TextPrimary,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                color = if (isSelected) TextPrimary else TextSecondary,
+                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
                             )
                         }
                     },
@@ -310,8 +295,8 @@ fun TopLeftGameSelector(
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = "Selected",
-                                tint = optionAccent,
-                                modifier = Modifier.size(18.dp)
+                                tint = TextPrimary,
+                                modifier = Modifier.size(16.dp)
                             )
                         }
                     },
@@ -332,66 +317,95 @@ fun VaultSearchBar(
     placeholder: String,
     modifier: Modifier = Modifier
 ) {
-    OutlinedTextField(
-        value = query,
-        onValueChange = onQueryChange,
-        modifier = modifier.fillMaxWidth(),
-        singleLine = true,
-        maxLines = 1,
-        placeholder = {
-            Text(
-                text = placeholder,
-                color = TextSecondary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(42.dp),
+        color = VaultSurface,
+        shape = RoundedCornerShape(8.dp),
+        border = BorderStroke(1.dp, SubtleBorder)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = null,
+                tint = TextMuted,
+                modifier = Modifier.size(17.dp)
             )
-        },
-        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextSecondary) },
-        trailingIcon = {
+            Box(
+                modifier = Modifier.weight(1f),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                if (query.isEmpty()) {
+                    Text(
+                        text = placeholder,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextMuted,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                BasicTextField(
+                    value = query,
+                    onValueChange = onQueryChange,
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = TextPrimary),
+                    cursorBrush = SolidColor(VaultAccentWhite),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
             if (query.isNotEmpty()) {
-                IconButton(onClick = { onQueryChange("") }) {
-                    Icon(Icons.Default.Close, contentDescription = "Clear search", tint = TextSecondary)
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .clickable { onQueryChange("") },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Clear search",
+                        tint = TextSecondary,
+                        modifier = Modifier.size(15.dp)
+                    )
                 }
             }
-        },
-        shape = RoundedCornerShape(14.dp),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = VaultSurface,
-            unfocusedContainerColor = VaultSurface,
-            focusedBorderColor = VaultGold,
-            unfocusedBorderColor = SubtleBorder,
-            focusedTextColor = TextPrimary,
-            unfocusedTextColor = TextPrimary
-        )
-    )
+        }
+    }
 }
 
 @Composable
 fun QuantityStepButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     contentDescription: String,
     onClick: () -> Unit,
     enabled: Boolean = true,
     isPrimary: Boolean = false,
-    sizeDp: Int = 32
+    sizeDp: Int = 28
 ) {
     val containerColor = when {
-        !enabled -> VaultSurfaceElevated.copy(alpha = 0.45f)
-        isPrimary -> VaultGold
+        !enabled -> VaultSurfaceElevated.copy(alpha = 0.4f)
+        isPrimary -> VaultAccentWhite
         else -> VaultSurfaceElevated
     }
     val contentColor = when {
-        !enabled -> TextSecondary.copy(alpha = 0.45f)
-        isPrimary -> Color(0xFF1A1404)
+        !enabled -> TextMuted.copy(alpha = 0.45f)
+        isPrimary -> VaultBackground
         else -> TextPrimary
     }
 
     Surface(
         modifier = Modifier
             .size(sizeDp.dp)
-            .clip(CircleShape)
+            .clip(RoundedCornerShape(6.dp))
             .clickable(enabled = enabled, onClick = onClick),
-        shape = CircleShape,
+        shape = RoundedCornerShape(6.dp),
         color = containerColor,
         border = if (!isPrimary) BorderStroke(1.dp, SubtleBorder) else null
     ) {
@@ -400,7 +414,7 @@ fun QuantityStepButton(
                 imageVector = icon,
                 contentDescription = contentDescription,
                 tint = contentColor,
-                modifier = Modifier.size((sizeDp * 0.54f).dp)
+                modifier = Modifier.size((sizeDp * 0.56f).dp)
             )
         }
     }
@@ -415,7 +429,6 @@ fun CardDetailBottomSheet(
     onToggleFavorite: () -> Unit
 ) {
     val card = item.card
-    val accent = gameAccentColor(card.game)
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -435,9 +448,9 @@ fun CardDetailBottomSheet(
             ) {
                 Box(
                     modifier = Modifier
-                        .width(108.dp)
-                        .height(152.dp)
-                        .clip(RoundedCornerShape(10.dp))
+                        .width(104.dp)
+                        .height(146.dp)
+                        .clip(RoundedCornerShape(6.dp))
                         .background(VaultSurfaceElevated),
                     contentAlignment = Alignment.Center
                 ) {
@@ -454,11 +467,12 @@ fun CardDetailBottomSheet(
                             modifier = Modifier.padding(8.dp)
                         ) {
                             GameBadge(game = card.game)
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(6.dp))
                             Text(
                                 text = card.collectorNumber,
+                                fontFamily = MonoFont,
                                 style = MaterialTheme.typography.labelMedium,
-                                color = TextSecondary
+                                color = TextMuted
                             )
                         }
                     }
@@ -466,7 +480,7 @@ fun CardDetailBottomSheet(
 
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                    verticalArrangement = Arrangement.spacedBy(5.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -475,19 +489,20 @@ fun CardDetailBottomSheet(
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             GameBadge(game = card.game)
                             Text(
-                                text = card.collectorNumber,
+                                text = "#${card.collectorNumber}",
+                                fontFamily = MonoFont,
                                 style = MaterialTheme.typography.labelMedium,
-                                color = TextSecondary
+                                color = TextMuted
                             )
                         }
                         FavoriteStarButton(
                             isFavorite = card.isFavorite,
                             onClick = onToggleFavorite,
-                            sizeDp = 30
+                            sizeDp = 28
                         )
                     }
                     Text(
@@ -500,13 +515,14 @@ fun CardDetailBottomSheet(
                     Text(
                         text = card.cardType,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = accent
+                        color = TextSecondary
                     )
                     if (card.manaOrStats.isNotBlank()) {
                         Text(
                             text = card.manaOrStats,
+                            fontFamily = MonoFont,
                             style = MaterialTheme.typography.labelMedium,
-                            color = VaultGold
+                            color = TextPrimary
                         )
                     }
                     Row(
@@ -521,9 +537,9 @@ fun CardDetailBottomSheet(
                         )
                         if (item.setName.isNotBlank()) {
                             Text(
-                                text = "• ${item.setName}",
+                                text = "· ${item.setName}",
                                 style = MaterialTheme.typography.labelMedium,
-                                color = TextSecondary,
+                                color = TextMuted,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -533,47 +549,40 @@ fun CardDetailBottomSheet(
             }
 
             if (card.description.isNotBlank()) {
-                Surface(
-                    color = VaultSurfaceElevated,
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = card.description,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextPrimary,
-                        modifier = Modifier.padding(12.dp)
-                    )
-                }
+                HorizontalDivider(color = SubtleBorder)
+                Text(
+                    text = card.description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondary
+                )
             }
 
-            // Quantity control row
             Surface(
                 color = VaultSurfaceElevated,
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(8.dp),
                 border = BorderStroke(
                     1.dp,
-                    if (item.isCollected) VaultEmerald.copy(alpha = 0.6f) else SubtleBorder
+                    if (item.isCollected) VaultEmerald.copy(alpha = 0.55f) else SubtleBorder
                 ),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column {
                         Text(
-                            text = "In Your Collection",
+                            text = "Owned copies",
                             style = MaterialTheme.typography.titleMedium,
                             color = TextPrimary
                         )
                         Text(
-                            text = if (item.isCollected) "Stored locally on device" else "Tap + to add this card",
+                            text = if (item.isCollected) "Stored locally" else "Not in collection",
                             style = MaterialTheme.typography.labelMedium,
-                            color = if (item.isCollected) VaultEmerald else TextSecondary
+                            color = if (item.isCollected) VaultEmerald else TextMuted
                         )
                     }
                     Row(
@@ -586,12 +595,12 @@ fun CardDetailBottomSheet(
                             onClick = { onAdjustQuantity(-1) },
                             enabled = item.ownedQuantity > 0,
                             isPrimary = false,
-                            sizeDp = 36
+                            sizeDp = 34
                         )
-                        Text(
-                            text = "${item.ownedQuantity}",
+                        AnimatedCounterText(
+                            count = item.ownedQuantity,
                             style = MaterialTheme.typography.headlineSmall,
-                            color = if (item.isCollected) VaultGold else TextSecondary
+                            color = if (item.isCollected) TextPrimary else TextMuted
                         )
                         QuantityStepButton(
                             icon = Icons.Default.Add,
@@ -599,7 +608,7 @@ fun CardDetailBottomSheet(
                             onClick = { onAdjustQuantity(1) },
                             enabled = true,
                             isPrimary = true,
-                            sizeDp = 36
+                            sizeDp = 34
                         )
                     }
                 }

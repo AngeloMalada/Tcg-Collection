@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.TcgVault" parent="android:Theme.Material.NoActionBar">
-        <item name="android:statusBarColor">#FF0D0F18</item>
-        <item name="android:navigationBarColor">#FF0D0F18</item>
+        <item name="android:statusBarColor">#FF09090B</item>
+        <item name="android:navigationBarColor">#FF09090B</item>
     </style>
 </resources>

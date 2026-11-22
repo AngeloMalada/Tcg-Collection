@@ -29,6 +29,14 @@ enum class CardOwnershipFilter(val label: String) {
     MISSING("Missing")
 }
 
+enum class CardSortOrder(val label: String, val shortLabel: String) {
+    NUMBER("Collector #", "#"),
+    NAME_ASC("Name (A–Z)", "A–Z"),
+    NAME_DESC("Name (Z–A)", "Z–A"),
+    RARITY_DESC("Rarity (High → Low)", "Rarity"),
+    OWNED_DESC("Owned (Most First)", "Owned")
+}
+
 @OptIn(ExperimentalCoroutinesApi::class)
 class TcgViewModel(
     private val repository: TcgRepository,
@@ -61,6 +69,9 @@ class TcgViewModel(
 
     private val _setCardFilter = MutableStateFlow(CardOwnershipFilter.ALL)
     val setCardFilter: StateFlow<CardOwnershipFilter> = _setCardFilter.asStateFlow()
+
+    private val _setCardSort = MutableStateFlow(CardSortOrder.NUMBER)
+    val setCardSort: StateFlow<CardSortOrder> = _setCardSort.asStateFlow()
 
     private val _isLoadingSetCards = MutableStateFlow(false)
     val isLoadingSetCards: StateFlow<Boolean> = _isLoadingSetCards.asStateFlow()
@@ -123,19 +134,21 @@ class TcgViewModel(
     val activeSetCards: StateFlow<List<CardWithCollection>> = combine(
         _activeSetId,
         _setCardQuery,
-        _setCardFilter
-    ) { setId, query, ownershipFilter ->
-        Triple(setId, query, ownershipFilter)
-    }.flatMapLatest { (setId, query, ownershipFilter) ->
+        _setCardFilter,
+        _setCardSort
+    ) { setId, query, ownershipFilter, sortOrder ->
+        Quadruple(setId, query, ownershipFilter, sortOrder)
+    }.flatMapLatest { (setId, query, ownershipFilter, sortOrder) ->
         if (setId == null) {
             flowOf(emptyList())
         } else {
-            combine(repository.observeCardsInSet(setId, query), flowOf(ownershipFilter)) { cards, filter ->
-                when (filter) {
+            repository.observeCardsInSet(setId, query).map { cards ->
+                val filtered = when (ownershipFilter) {
                     CardOwnershipFilter.ALL -> cards
                     CardOwnershipFilter.COLLECTED -> cards.filter { it.isCollected }
                     CardOwnershipFilter.MISSING -> cards.filter { !it.isCollected }
                 }
+                sortSetCards(filtered, sortOrder)
             }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -169,6 +182,10 @@ class TcgViewModel(
 
     fun updateSetCardFilter(filter: CardOwnershipFilter) {
         _setCardFilter.value = filter
+    }
+
+    fun updateSetCardSort(sortOrder: CardSortOrder) {
+        _setCardSort.value = sortOrder
     }
 
     fun dismissBanner() {
@@ -296,6 +313,54 @@ class TcgViewModel(
                 "Saved custom precon '$name' locally."
             }
         }
+    }
+
+    private data class Quadruple<A, B, C, D>(val a: A, val b: B, val c: C, val d: D)
+
+    private fun sortSetCards(
+        cards: List<CardWithCollection>,
+        sortOrder: CardSortOrder
+    ): List<CardWithCollection> {
+        fun naturalNum(raw: String): Int =
+            Regex("\\d+").find(raw)?.value?.toIntOrNull() ?: Int.MAX_VALUE
+
+        fun rarityRank(rarity: String): Int {
+            val r = rarity.trim().lowercase()
+            return when {
+                r.contains("quarter century") || r.contains("starlight") || r.contains("ghost") -> 7
+                r.contains("mythic") || r.contains("secret") || r.contains("collector") || r.contains("ultimate") -> 6
+                r.contains("special") || r.contains("bonus") || r.contains("timeshifted") -> 5
+                r.contains("ultra") -> 5
+                r.contains("super") -> 4
+                r.contains("rare") && !r.contains("uncommon") -> 3
+                r.contains("uncommon") -> 2
+                else -> 1
+            }
+        }
+
+        val comparator: Comparator<CardWithCollection> = when (sortOrder) {
+            CardSortOrder.NUMBER -> compareByDescending<CardWithCollection> { it.card.isFavorite }
+                .thenBy { naturalNum(it.card.collectorNumber) }
+                .thenBy { it.card.collectorNumber }
+                .thenBy { it.card.name }
+
+            CardSortOrder.NAME_ASC -> compareByDescending<CardWithCollection> { it.card.isFavorite }
+                .thenBy { it.card.name.lowercase() }
+
+            CardSortOrder.NAME_DESC -> compareByDescending<CardWithCollection> { it.card.isFavorite }
+                .thenByDescending { it.card.name.lowercase() }
+
+            CardSortOrder.RARITY_DESC -> compareByDescending<CardWithCollection> { it.card.isFavorite }
+                .thenByDescending { rarityRank(it.card.rarity) }
+                .thenBy { naturalNum(it.card.collectorNumber) }
+                .thenBy { it.card.name }
+
+            CardSortOrder.OWNED_DESC -> compareByDescending<CardWithCollection> { it.card.isFavorite }
+                .thenByDescending { it.ownedQuantity }
+                .thenBy { naturalNum(it.card.collectorNumber) }
+                .thenBy { it.card.name }
+        }
+        return cards.sortedWith(comparator)
     }
 
     class Factory(

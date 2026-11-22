@@ -1,11 +1,7 @@
 package com.tcgvault.app.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -24,7 +20,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -33,10 +29,10 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -49,7 +45,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -59,9 +54,13 @@ import com.tcgvault.app.data.model.TcgGame
 import com.tcgvault.app.ui.components.FavoriteStarButton
 import com.tcgvault.app.ui.components.GameBadge
 import com.tcgvault.app.ui.components.rarityColor
+import com.tcgvault.app.ui.theme.MonoFont
 import com.tcgvault.app.ui.theme.SubtleBorder
+import com.tcgvault.app.ui.theme.TextMuted
 import com.tcgvault.app.ui.theme.TextPrimary
 import com.tcgvault.app.ui.theme.TextSecondary
+import com.tcgvault.app.ui.theme.VaultAccentWhite
+import com.tcgvault.app.ui.theme.VaultBackground
 import com.tcgvault.app.ui.theme.VaultEmerald
 import com.tcgvault.app.ui.theme.VaultGold
 import com.tcgvault.app.ui.theme.VaultSurface
@@ -95,9 +94,10 @@ fun PreconDetailBottomSheet(
             ) {
                 GameBadge(game = current.precon.game)
                 Text(
-                    text = "${current.precon.category} • ${current.precon.releaseYear}",
+                    text = "${current.precon.category} · ${current.precon.releaseYear}",
+                    fontFamily = MonoFont,
                     style = MaterialTheme.typography.labelMedium,
-                    color = TextSecondary
+                    color = TextMuted
                 )
             }
             Text(
@@ -114,38 +114,40 @@ fun PreconDetailBottomSheet(
                 onClick = onAddPrecon,
                 enabled = !isAdding,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = VaultGold,
-                    contentColor = Color(0xFF1A1404)
+                    containerColor = VaultAccentWhite,
+                    contentColor = VaultBackground
                 )
             ) {
                 if (isAdding) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(16.dp),
                         strokeWidth = 2.dp,
-                        color = Color(0xFF1A1404)
+                        color = VaultBackground
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Adding Decklist…", fontWeight = FontWeight.Bold)
+                    Text("Adding decklist…", fontWeight = FontWeight.SemiBold)
                 } else {
-                    Icon(Icons.Default.Add, contentDescription = null)
+                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(17.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = if (current.precon.ownedCount > 0) {
-                            "Add Another Copy (Owned x${current.precon.ownedCount})"
+                            "Add Another Copy (Owned ×${current.precon.ownedCount})"
                         } else {
                             "Add Precon + Cards to Collection"
                         },
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
             }
 
+            HorizontalDivider(color = SubtleBorder)
             Text(
-                text = "Decklist (${cards.sumOf { it.quantityInDeck }} cards)",
-                style = MaterialTheme.typography.titleMedium,
-                color = VaultGold
+                text = "DECKLIST · ${cards.sumOf { it.quantityInDeck }} CARDS",
+                fontFamily = MonoFont,
+                style = MaterialTheme.typography.labelMedium,
+                color = TextMuted
             )
 
             when {
@@ -157,12 +159,12 @@ fun PreconDetailBottomSheet(
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            CircularProgressIndicator(color = VaultGold)
+                            CircularProgressIndicator(color = VaultAccentWhite, strokeWidth = 2.dp)
                             Spacer(modifier = Modifier.height(10.dp))
                             Text(
-                                text = "Loading decklist into local storage…",
+                                text = "Loading decklist…",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = TextSecondary
+                                color = TextMuted
                             )
                         }
                     }
@@ -170,9 +172,9 @@ fun PreconDetailBottomSheet(
 
                 cards.isEmpty() -> {
                     Text(
-                        text = "Decklist could not be loaded offline. Connect to the internet and tap Add Precon to fetch its cards.",
+                        text = "Decklist unavailable offline. Tap Add Precon while online to fetch its cards.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary
+                        color = TextMuted
                     )
                 }
 
@@ -184,22 +186,25 @@ fun PreconDetailBottomSheet(
                         items(cards, key = { it.cardId }) { card ->
                             Surface(
                                 color = VaultSurfaceElevated,
-                                shape = RoundedCornerShape(10.dp),
+                                shape = RoundedCornerShape(6.dp),
+                                border = BorderStroke(1.dp, SubtleBorder),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                                        .padding(horizontal = 10.dp, vertical = 8.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            text = "${card.quantityInDeck}x ${card.cardName}",
+                                            text = "${card.quantityInDeck}× ${card.cardName}",
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = TextPrimary,
-                                            fontWeight = FontWeight.Medium
+                                            fontWeight = FontWeight.Medium,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
@@ -208,24 +213,25 @@ fun PreconDetailBottomSheet(
                                             Text(
                                                 text = card.rarity,
                                                 style = MaterialTheme.typography.labelMedium,
-                                                fontWeight = FontWeight.SemiBold,
+                                                fontWeight = FontWeight.Medium,
                                                 color = rarityColor(current.precon.game, card.rarity),
                                                 maxLines = 1
                                             )
                                             Text(
-                                                text = "• ${card.cardType}",
+                                                text = "· ${card.cardType}",
                                                 style = MaterialTheme.typography.labelMedium,
-                                                color = TextSecondary,
+                                                color = TextMuted,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis
                                             )
                                         }
                                     }
                                     Text(
-                                        text = "Own ${card.ownedQuantity}",
+                                        text = "${card.ownedQuantity}",
+                                        fontFamily = MonoFont,
                                         style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (card.ownedQuantity > 0) VaultEmerald else TextSecondary
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = if (card.ownedQuantity > 0) VaultEmerald else TextMuted
                                     )
                                 }
                             }
@@ -251,27 +257,24 @@ fun PreconCard(
     val owned = precon.ownedCount > 0
     val borderColor by animateColorAsState(
         targetValue = when {
-            precon.isFavorite -> VaultGold.copy(alpha = 0.75f)
-            owned -> VaultEmerald
+            precon.isFavorite -> VaultGold.copy(alpha = 0.55f)
+            owned -> VaultEmerald.copy(alpha = 0.55f)
             else -> SubtleBorder
         },
-        animationSpec = tween(250),
+        animationSpec = tween(220),
         label = "preconBorder"
     )
 
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(8.dp))
             .clickable(onClick = onClick),
         color = VaultSurface,
-        shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(
-            width = if (owned || precon.isFavorite) 1.5.dp else 1.dp,
-            color = borderColor
-        )
+        shape = RoundedCornerShape(8.dp),
+        border = BorderStroke(1.dp, borderColor)
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 11.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -279,62 +282,73 @@ fun PreconCard(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.weight(1f)
                 ) {
-                    GameBadge(game = precon.game)
+                    Surface(
+                        color = VaultSurfaceElevated,
+                        shape = RoundedCornerShape(4.dp),
+                        border = BorderStroke(1.dp, SubtleBorder)
+                    ) {
+                        Text(
+                            text = precon.setCode,
+                            fontFamily = MonoFont,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = TextPrimary,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
                     Text(
-                        text = "${precon.category} • ${precon.releaseYear}",
+                        text = "${precon.releaseYear} · ${precon.category}",
+                        fontFamily = MonoFont,
                         style = MaterialTheme.typography.labelMedium,
-                        color = TextSecondary,
+                        color = TextMuted,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     if (owned) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                Icons.Default.CheckCircle,
+                                Icons.Default.Check,
                                 contentDescription = "Owned",
                                 tint = VaultEmerald,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(13.dp)
                             )
-                            Spacer(modifier = Modifier.width(4.dp))
+                            Spacer(modifier = Modifier.width(2.dp))
                             Text(
-                                text = "Owned x${precon.ownedCount}",
+                                text = "×${precon.ownedCount}",
+                                fontFamily = MonoFont,
                                 style = MaterialTheme.typography.labelMedium,
                                 color = VaultEmerald,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.SemiBold
                             )
                         }
                     }
                     FavoriteStarButton(
                         isFavorite = precon.isFavorite,
                         onClick = onToggleFavorite,
-                        sizeDp = 26
+                        sizeDp = 24
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = precon.name,
                 style = MaterialTheme.typography.titleMedium,
-                color = TextPrimary
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = precon.description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary,
-                maxLines = 2,
+                fontWeight = FontWeight.SemiBold,
+                color = TextPrimary,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -342,47 +356,70 @@ fun PreconCard(
             ) {
                 Text(
                     text = if (item.totalCardsInDeck > 0) {
-                        "${item.totalCardsInDeck} cards tracked"
+                        "${item.totalCardsInDeck} cards"
                     } else {
-                        "Set ${precon.setCode}"
+                        "Tap to inspect decklist"
                     },
+                    fontFamily = MonoFont,
                     style = MaterialTheme.typography.labelMedium,
-                    color = VaultGold
+                    color = TextMuted
                 )
 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     if (owned) {
-                        OutlinedButton(
-                            onClick = onRemove,
-                            shape = RoundedCornerShape(10.dp),
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                        Surface(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .clickable(onClick = onRemove),
+                            color = VaultSurfaceElevated,
+                            shape = RoundedCornerShape(6.dp),
+                            border = BorderStroke(1.dp, SubtleBorder)
                         ) {
-                            Icon(Icons.Default.Remove, contentDescription = "Remove precon", modifier = Modifier.size(16.dp))
+                            Box(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.Remove,
+                                    contentDescription = "Remove precon",
+                                    tint = TextPrimary,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
                         }
                     }
-                    Button(
-                        onClick = onAdd,
-                        enabled = !isAdding,
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = VaultGold,
-                            contentColor = Color(0xFF1A1404)
-                        ),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                    Surface(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .clickable(enabled = !isAdding, onClick = onAdd),
+                        color = VaultAccentWhite,
+                        shape = RoundedCornerShape(6.dp)
                     ) {
-                        if (isAdding) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp,
-                                color = Color(0xFF1A1404)
-                            )
-                        } else {
-                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = if (owned) "Add +1" else "Add Precon",
-                                fontWeight = FontWeight.Bold
-                            )
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            if (isAdding) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(13.dp),
+                                    strokeWidth = 1.8.dp,
+                                    color = VaultBackground
+                                )
+                            } else {
+                                Icon(
+                                    Icons.Default.Add,
+                                    contentDescription = null,
+                                    tint = VaultBackground,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = if (owned) "+1" else "Add",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = VaultBackground,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
                         }
                     }
                 }
@@ -409,7 +446,8 @@ fun CreateCustomPreconDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = VaultSurface,
-        title = { Text("Add Custom Precon", color = TextPrimary, fontWeight = FontWeight.Bold) },
+        shape = RoundedCornerShape(10.dp),
+        title = { Text("Add Custom Precon", color = TextPrimary, fontWeight = FontWeight.SemiBold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -477,12 +515,13 @@ fun CreateCustomPreconDialog(
                     onSave(name, selectedGame, category, year, cardLines, addImmediately)
                 },
                 enabled = name.isNotBlank(),
+                shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = VaultGold,
-                    contentColor = Color(0xFF1A1404)
+                    containerColor = VaultAccentWhite,
+                    contentColor = VaultBackground
                 )
             ) {
-                Text("Save Precon", fontWeight = FontWeight.Bold)
+                Text("Save", fontWeight = FontWeight.SemiBold)
             }
         },
         dismissButton = {

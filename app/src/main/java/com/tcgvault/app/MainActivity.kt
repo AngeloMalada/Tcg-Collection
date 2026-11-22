@@ -6,28 +6,33 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CollectionsBookmark
-import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -54,13 +59,13 @@ import com.tcgvault.app.ui.components.TopLeftGameSelector
 import com.tcgvault.app.ui.screens.CollectionScreen
 import com.tcgvault.app.ui.screens.SetDetailScreen
 import com.tcgvault.app.ui.screens.SetsScreen
-import com.tcgvault.app.ui.theme.TextPrimary
-import com.tcgvault.app.ui.theme.TextSecondary
+import com.tcgvault.app.ui.theme.MonoFont
+import com.tcgvault.app.ui.theme.SubtleBorder
 import com.tcgvault.app.ui.theme.TcgVaultTheme
+import com.tcgvault.app.ui.theme.TextMuted
+import com.tcgvault.app.ui.theme.TextPrimary
+import com.tcgvault.app.ui.theme.VaultAccentWhite
 import com.tcgvault.app.ui.theme.VaultBackground
-import com.tcgvault.app.ui.theme.VaultGold
-import com.tcgvault.app.ui.theme.VaultSurface
-import com.tcgvault.app.ui.theme.VaultSurfaceElevated
 import com.tcgvault.app.ui.viewmodel.TcgViewModel
 import java.net.URLDecoder
 import java.net.URLEncoder
@@ -89,7 +94,7 @@ class MainActivity : ComponentActivity() {
 }
 
 private enum class TopLevelTab(val route: String, val label: String, val icon: ImageVector) {
-    SETS("sets", "Sets", Icons.Default.Layers),
+    SETS("sets", "Catalog", Icons.Default.Layers),
     COLLECTION("collection", "Collection", Icons.Default.CollectionsBookmark)
 }
 
@@ -118,6 +123,7 @@ private fun TcgVaultRoot(viewModel: TcgViewModel) {
     val activeSetCards by viewModel.activeSetCards.collectAsState()
     val setCardQuery by viewModel.setCardQuery.collectAsState()
     val setCardFilter by viewModel.setCardFilter.collectAsState()
+    val setCardSort by viewModel.setCardSort.collectAsState()
     val isLoadingSetCards by viewModel.isLoadingSetCards.collectAsState()
     val setLoadError by viewModel.setLoadError.collectAsState()
 
@@ -130,62 +136,100 @@ private fun TcgVaultRoot(viewModel: TcgViewModel) {
         }
     }
 
-    val showBottomBar = TopLevelTab.entries.any { it.route == currentRoute }
+    val showChrome = TopLevelTab.entries.any { it.route == currentRoute }
 
     Scaffold(
         containerColor = VaultBackground,
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
-            if (showBottomBar) {
+            if (showChrome) {
                 Surface(color = VaultBackground) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .statusBarsPadding()
-                            .padding(horizontal = 16.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        TopLeftGameSelector(
-                            selected = selectedGame,
-                            onSelect = viewModel::selectGame
-                        )
-                        Text(
-                            text = "TCG Vault",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = VaultGold
-                        )
+                    Column {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .statusBarsPadding()
+                                .padding(horizontal = 16.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            TopLeftGameSelector(
+                                selected = selectedGame,
+                                onSelect = viewModel::selectGame
+                            )
+                            AnimatedVisibility(
+                                visible = isSyncing,
+                                enter = fadeIn(tween(200)),
+                                exit = fadeOut(tween(250))
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(12.dp),
+                                        strokeWidth = 1.6.dp,
+                                        color = TextMuted
+                                    )
+                                    Text(
+                                        text = "SYNC",
+                                        fontFamily = MonoFont,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = TextMuted
+                                    )
+                                }
+                            }
+                        }
+                        HorizontalDivider(color = SubtleBorder)
                     }
                 }
             }
         },
         bottomBar = {
-            if (showBottomBar) {
-                NavigationBar(containerColor = VaultSurface) {
-                    TopLevelTab.entries.forEach { tab ->
-                        val selected = currentRoute == tab.route
-                        NavigationBarItem(
-                            selected = selected,
-                            onClick = {
-                                if (!selected) {
-                                    navController.navigate(tab.route) {
-                                        popUpTo(TopLevelTab.SETS.route) { saveState = true }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
+            if (showChrome) {
+                Surface(color = VaultBackground) {
+                    Column {
+                        HorizontalDivider(color = SubtleBorder)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .navigationBarsPadding()
+                                .padding(vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            TopLevelTab.entries.forEach { tab ->
+                                val selected = currentRoute == tab.route
+                                Row(
+                                    modifier = Modifier
+                                        .clickable {
+                                            if (!selected) {
+                                                navController.navigate(tab.route) {
+                                                    popUpTo(TopLevelTab.SETS.route) { saveState = true }
+                                                    launchSingleTop = true
+                                                    restoreState = true
+                                                }
+                                            }
+                                        }
+                                        .padding(horizontal = 24.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        imageVector = tab.icon,
+                                        contentDescription = tab.label,
+                                        tint = if (selected) VaultAccentWhite else TextMuted,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(7.dp))
+                                    Text(
+                                        text = tab.label,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                                        color = if (selected) TextPrimary else TextMuted
+                                    )
                                 }
-                            },
-                            icon = { Icon(tab.icon, contentDescription = tab.label) },
-                            label = { Text(tab.label) },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = VaultGold,
-                                selectedTextColor = VaultGold,
-                                unselectedIconColor = TextSecondary,
-                                unselectedTextColor = TextSecondary,
-                                indicatorColor = VaultSurfaceElevated
-                            )
-                        )
+                            }
+                        }
                     }
                 }
             }
@@ -200,10 +244,10 @@ private fun TcgVaultRoot(viewModel: TcgViewModel) {
             NavHost(
                 navController = navController,
                 startDestination = TopLevelTab.SETS.route,
-                enterTransition = { fadeIn(tween(220)) + slideInHorizontally(tween(220)) { it / 12 } },
-                exitTransition = { fadeOut(tween(180)) },
-                popEnterTransition = { fadeIn(tween(220)) + slideInHorizontally(tween(220)) { -it / 12 } },
-                popExitTransition = { fadeOut(tween(180)) + slideOutHorizontally(tween(180)) { it / 10 } }
+                enterTransition = { fadeIn(tween(200)) + slideInHorizontally(tween(200)) { it / 14 } },
+                exitTransition = { fadeOut(tween(150)) },
+                popEnterTransition = { fadeIn(tween(200)) + slideInHorizontally(tween(200)) { -it / 14 } },
+                popExitTransition = { fadeOut(tween(150)) + slideOutHorizontally(tween(150)) { it / 12 } }
             ) {
                 composable(TopLevelTab.SETS.route) {
                     SetsScreen(
@@ -246,11 +290,13 @@ private fun TcgVaultRoot(viewModel: TcgViewModel) {
                         cards = activeSetCards,
                         query = setCardQuery,
                         ownershipFilter = setCardFilter,
+                        sortOrder = setCardSort,
                         isLoadingCards = isLoadingSetCards,
                         loadError = setLoadError,
                         onBack = { navController.popBackStack() },
                         onQueryChange = viewModel::updateSetCardQuery,
                         onFilterChange = viewModel::updateSetCardFilter,
+                        onSortChange = viewModel::updateSetCardSort,
                         onCardQuickAdd = viewModel::onCardQuickAdd,
                         onAdjustQuantity = viewModel::adjustCardQuantity,
                         onToggleCardFavorite = viewModel::toggleCardFavorite

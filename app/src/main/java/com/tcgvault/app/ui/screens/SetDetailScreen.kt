@@ -29,17 +29,18 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -69,16 +70,20 @@ import com.tcgvault.app.ui.components.FavoriteStarButton
 import com.tcgvault.app.ui.components.GameBadge
 import com.tcgvault.app.ui.components.QuantityStepButton
 import com.tcgvault.app.ui.components.VaultSearchBar
-import com.tcgvault.app.ui.components.gameAccentColor
 import com.tcgvault.app.ui.components.rarityColor
+import com.tcgvault.app.ui.theme.MonoFont
 import com.tcgvault.app.ui.theme.SubtleBorder
+import com.tcgvault.app.ui.theme.TextMuted
 import com.tcgvault.app.ui.theme.TextPrimary
 import com.tcgvault.app.ui.theme.TextSecondary
+import com.tcgvault.app.ui.theme.VaultAccentWhite
+import com.tcgvault.app.ui.theme.VaultBackground
 import com.tcgvault.app.ui.theme.VaultEmerald
 import com.tcgvault.app.ui.theme.VaultGold
 import com.tcgvault.app.ui.theme.VaultSurface
 import com.tcgvault.app.ui.theme.VaultSurfaceElevated
 import com.tcgvault.app.ui.viewmodel.CardOwnershipFilter
+import com.tcgvault.app.ui.viewmodel.CardSortOrder
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -87,26 +92,27 @@ fun SetDetailScreen(
     cards: List<CardWithCollection>,
     query: String,
     ownershipFilter: CardOwnershipFilter,
+    sortOrder: CardSortOrder,
     isLoadingCards: Boolean,
     loadError: String?,
     onBack: () -> Unit,
     onQueryChange: (String) -> Unit,
     onFilterChange: (CardOwnershipFilter) -> Unit,
+    onSortChange: (CardSortOrder) -> Unit,
     onCardQuickAdd: (String) -> Unit,
     onAdjustQuantity: (String, Int) -> Unit,
     onToggleCardFavorite: (String) -> Unit
 ) {
     var detailCardId by remember { mutableStateOf<String?>(null) }
+    var sortMenuExpanded by remember { mutableStateOf(false) }
     val activeDetailCard = cards.firstOrNull { it.card.id == detailCardId }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp)
-    ) {
-        Spacer(modifier = Modifier.height(8.dp))
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Minimal header bar
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onBack) {
@@ -118,24 +124,19 @@ fun SetDetailScreen(
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = setProgress?.set?.name ?: "Loading Set…",
+                    text = setProgress?.set?.name ?: "Loading…",
                     style = MaterialTheme.typography.titleLarge,
                     color = TextPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 if (setProgress != null) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        GameBadge(game = setProgress.set.game)
-                        Text(
-                            text = "${setProgress.set.code} • ${setProgress.collectedUniqueCount}/${setProgress.displayTotalCards} collected",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = VaultEmerald
-                        )
-                    }
+                    Text(
+                        text = "${setProgress.set.code} · ${setProgress.collectedUniqueCount}/${setProgress.displayTotalCards} collected",
+                        fontFamily = MonoFont,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (setProgress.collectedUniqueCount > 0) VaultEmerald else TextMuted
+                    )
                 }
             }
         }
@@ -143,116 +144,179 @@ fun SetDetailScreen(
         if (setProgress != null) {
             val animatedHeaderProgress by animateFloatAsState(
                 targetValue = setProgress.progressFraction,
-                animationSpec = tween(420),
+                animationSpec = tween(380),
                 label = "setDetailProgress"
             )
-            Spacer(modifier = Modifier.height(6.dp))
             LinearProgressIndicator(
                 progress = { animatedHeaderProgress },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(6.dp)
-                    .clip(RoundedCornerShape(3.dp)),
-                color = gameAccentColor(setProgress.set.game),
-                trackColor = VaultSurfaceElevated
+                    .height(2.dp),
+                color = VaultEmerald,
+                trackColor = SubtleBorder
             )
+        } else {
+            HorizontalDivider(color = SubtleBorder)
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
-        VaultSearchBar(
-            query = query,
-            onQueryChange = onQueryChange,
-            placeholder = "Search cards in set..."
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp)
         ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                CardOwnershipFilter.entries.forEach { filter ->
-                    val selected = filter == ownershipFilter
-                    FilterChip(
-                        selected = selected,
-                        onClick = { onFilterChange(filter) },
-                        label = { Text(filter.label) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = VaultGold.copy(alpha = 0.22f),
-                            selectedLabelColor = VaultGold,
-                            containerColor = VaultSurface,
-                            labelColor = TextSecondary
-                        ),
-                        border = FilterChipDefaults.filterChipBorder(
-                            enabled = true,
-                            selected = selected,
-                            borderColor = SubtleBorder,
-                            selectedBorderColor = VaultGold
-                        )
-                    )
-                }
-            }
-            Text(
-                text = "Tap card = +1",
-                style = MaterialTheme.typography.labelMedium,
-                color = TextSecondary
+            Spacer(modifier = Modifier.height(10.dp))
+            VaultSearchBar(
+                query = query,
+                onQueryChange = onQueryChange,
+                placeholder = "Search cards in set..."
             )
-        }
 
-        Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    CardOwnershipFilter.entries.forEach { filter ->
+                        val selected = filter == ownershipFilter
+                        Surface(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .clickable { onFilterChange(filter) },
+                            color = if (selected) VaultAccentWhite else VaultSurface,
+                            shape = RoundedCornerShape(6.dp),
+                            border = BorderStroke(1.dp, if (selected) VaultAccentWhite else SubtleBorder)
+                        ) {
+                            Text(
+                                text = filter.label,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                                color = if (selected) VaultBackground else TextSecondary,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                            )
+                        }
+                    }
+                }
+                Box {
+                    Surface(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .clickable { sortMenuExpanded = true },
+                        color = VaultSurface,
+                        shape = RoundedCornerShape(6.dp),
+                        border = BorderStroke(1.dp, SubtleBorder)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Sort,
+                                contentDescription = "Sort cards",
+                                tint = TextSecondary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text = sortOrder.shortLabel,
+                                fontFamily = MonoFont,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = TextPrimary,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
 
-        when {
-            isLoadingCards && cards.isEmpty() -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(color = VaultGold)
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = "Fetching set cards into local storage…",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = TextSecondary
-                        )
+                    DropdownMenu(
+                        expanded = sortMenuExpanded,
+                        onDismissRequest = { sortMenuExpanded = false },
+                        modifier = Modifier.background(VaultSurface)
+                    ) {
+                        CardSortOrder.entries.forEach { option ->
+                            val isSelected = option == sortOrder
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = option.label,
+                                        color = if (isSelected) TextPrimary else TextSecondary,
+                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                                    )
+                                },
+                                trailingIcon = {
+                                    if (isSelected) {
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = "Selected",
+                                            tint = TextPrimary,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                },
+                                onClick = {
+                                    onSortChange(option)
+                                    sortMenuExpanded = false
+                                }
+                            )
+                        }
                     }
                 }
             }
 
-            loadError != null && cards.isEmpty() -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = loadError,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary
-                    )
-                }
-            }
+            Spacer(modifier = Modifier.height(10.dp))
 
-            cards.isEmpty() -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = "No cards match this filter.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary
-                    )
+            when {
+                isLoadingCards && cards.isEmpty() -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator(color = VaultAccentWhite, strokeWidth = 2.dp)
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = "Loading set cards…",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextMuted
+                            )
+                        }
+                    }
                 }
-            }
 
-            else -> {
-                LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 156.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    contentPadding = PaddingValues(bottom = 24.dp)
-                ) {
-                    items(cards, key = { it.card.id }) { item ->
-                        SetCardTile(
-                            item = item,
-                            onTapAdd = { onCardQuickAdd(item.card.id) },
-                            onAdjust = { delta -> onAdjustQuantity(item.card.id, delta) },
-                            onInspect = { detailCardId = item.card.id },
-                            onToggleFavorite = { onToggleCardFavorite(item.card.id) },
-                            modifier = Modifier.animateItemPlacement()
+                loadError != null && cards.isEmpty() -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = loadError,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextMuted
                         )
+                    }
+                }
+
+                cards.isEmpty() -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = "No cards match this filter.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextMuted
+                        )
+                    }
+                }
+
+                else -> {
+                    LazyVerticalGrid(
+                        columns = GridCells.Adaptive(minSize = 156.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        contentPadding = PaddingValues(bottom = 24.dp)
+                    ) {
+                        items(cards, key = { it.card.id }) { item ->
+                            SetCardTile(
+                                item = item,
+                                onTapAdd = { onCardQuickAdd(item.card.id) },
+                                onAdjust = { delta -> onAdjustQuantity(item.card.id, delta) },
+                                onInspect = { detailCardId = item.card.id },
+                                onToggleFavorite = { onToggleCardFavorite(item.card.id) },
+                                modifier = Modifier.animateItemPlacement()
+                            )
+                        }
                     }
                 }
             }
@@ -283,40 +347,37 @@ private fun SetCardTile(
     val collected = item.isCollected
     val cardBorderColor by animateColorAsState(
         targetValue = when {
-            card.isFavorite -> VaultGold
-            collected -> VaultEmerald
+            card.isFavorite -> VaultGold.copy(alpha = 0.7f)
+            collected -> VaultEmerald.copy(alpha = 0.7f)
             else -> SubtleBorder
         },
-        animationSpec = tween(250),
+        animationSpec = tween(220),
         label = "tileBorder"
     )
     val artworkAlpha by animateFloatAsState(
-        targetValue = if (collected) 1f else 0.72f,
-        animationSpec = tween(250),
+        targetValue = if (collected) 1f else 0.78f,
+        animationSpec = tween(220),
         label = "artAlpha"
     )
 
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(8.dp))
             .combinedClickable(
                 onClick = onTapAdd,
                 onLongClick = onInspect
             ),
         color = VaultSurface,
-        shape = RoundedCornerShape(14.dp),
-        border = BorderStroke(
-            width = if (collected || card.isFavorite) 1.5.dp else 1.dp,
-            color = cardBorderColor
-        )
+        shape = RoundedCornerShape(8.dp),
+        border = BorderStroke(1.dp, cardBorderColor)
     ) {
-        Column(modifier = Modifier.padding(8.dp)) {
+        Column(modifier = Modifier.padding(7.dp)) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(0.72f)
-                    .clip(RoundedCornerShape(10.dp))
+                    .clip(RoundedCornerShape(6.dp))
                     .background(VaultSurfaceElevated)
                     .alpha(artworkAlpha),
                 contentAlignment = Alignment.Center
@@ -335,7 +396,7 @@ private fun SetCardTile(
                         modifier = Modifier.padding(10.dp)
                     ) {
                         GameBadge(game = card.game)
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             text = card.name,
                             style = MaterialTheme.typography.labelMedium,
@@ -343,45 +404,35 @@ private fun SetCardTile(
                             maxLines = 3,
                             overflow = TextOverflow.Ellipsis
                         )
-                        if (card.manaOrStats.isNotBlank()) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = card.manaOrStats,
-                                style = MaterialTheme.typography.labelMedium,
-                                color = VaultGold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
                     }
                 }
 
-                // Collected badge top-right with pop-in animation
                 androidx.compose.animation.AnimatedVisibility(
                     visible = collected,
-                    enter = scaleIn(tween(180)) + fadeIn(tween(180)),
-                    exit = scaleOut(tween(140)) + fadeOut(tween(140)),
+                    enter = scaleIn(tween(160)) + fadeIn(tween(160)),
+                    exit = scaleOut(tween(120)) + fadeOut(tween(120)),
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(6.dp)
+                        .padding(5.dp)
                 ) {
                     Surface(
                         color = VaultEmerald,
-                        shape = RoundedCornerShape(8.dp)
+                        shape = RoundedCornerShape(5.dp)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                         ) {
                             Icon(
                                 Icons.Default.Check,
                                 contentDescription = "Collected",
                                 tint = Color(0xFF042617),
-                                modifier = Modifier.size(13.dp)
+                                modifier = Modifier.size(12.dp)
                             )
                             Spacer(modifier = Modifier.width(2.dp))
                             Text(
-                                text = "x${item.ownedQuantity}",
+                                text = "×${item.ownedQuantity}",
+                                fontFamily = MonoFont,
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF042617)
@@ -391,16 +442,17 @@ private fun SetCardTile(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(7.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = card.name,
                         style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Medium,
                         color = TextPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -410,55 +462,55 @@ private fun SetCardTile(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
-                            text = "${card.collectorNumber} •",
+                            text = card.collectorNumber,
+                            fontFamily = MonoFont,
                             style = MaterialTheme.typography.labelMedium,
-                            color = TextSecondary,
+                            color = TextMuted,
                             maxLines = 1
+                        )
+                        Text(
+                            text = "·",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = TextMuted
                         )
                         Text(
                             text = card.rarity,
                             style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold,
+                            fontWeight = FontWeight.Medium,
                             color = rarityColor(card.game, card.rarity),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    FavoriteStarButton(
-                        isFavorite = card.isFavorite,
-                        onClick = onToggleFavorite,
-                        sizeDp = 26
+                FavoriteStarButton(
+                    isFavorite = card.isFavorite,
+                    onClick = onToggleFavorite,
+                    sizeDp = 24
+                )
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .clickable(onClick = onInspect),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Info,
+                        contentDescription = "Card Details",
+                        tint = TextMuted,
+                        modifier = Modifier.size(15.dp)
                     )
-                    Surface(
-                        modifier = Modifier
-                            .size(26.dp)
-                            .clip(CircleShape)
-                            .clickable(onClick = onInspect),
-                        shape = CircleShape,
-                        color = VaultSurfaceElevated,
-                        border = BorderStroke(1.dp, SubtleBorder)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                Icons.Default.Info,
-                                contentDescription = "Card Details",
-                                tint = TextSecondary,
-                                modifier = Modifier.size(15.dp)
-                            )
-                        }
-                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(7.dp))
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(VaultSurfaceElevated.copy(alpha = 0.6f))
-                    .padding(horizontal = 6.dp, vertical = 5.dp),
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(VaultBackground)
+                    .padding(horizontal = 4.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -468,14 +520,13 @@ private fun SetCardTile(
                     onClick = { onAdjust(-1) },
                     enabled = item.ownedQuantity > 0,
                     isPrimary = false,
-                    sizeDp = 30
+                    sizeDp = 26
                 )
                 AnimatedCounterText(
                     count = item.ownedQuantity,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = if (collected) VaultEmerald else TextSecondary,
-                    suffix = " owned"
+                    color = if (collected) VaultEmerald else TextMuted
                 )
                 QuantityStepButton(
                     icon = Icons.Default.Add,
@@ -483,7 +534,7 @@ private fun SetCardTile(
                     onClick = { onAdjust(1) },
                     enabled = true,
                     isPrimary = true,
-                    sizeDp = 30
+                    sizeDp = 26
                 )
             }
         }

@@ -17,20 +17,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,7 +36,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -54,15 +50,15 @@ import com.tcgvault.app.ui.components.GameBadge
 import com.tcgvault.app.ui.components.QuantityStepButton
 import com.tcgvault.app.ui.components.VaultSearchBar
 import com.tcgvault.app.ui.components.rarityColor
-import com.tcgvault.app.ui.theme.MtgAccent
+import com.tcgvault.app.ui.theme.MonoFont
 import com.tcgvault.app.ui.theme.SubtleBorder
+import com.tcgvault.app.ui.theme.TextMuted
 import com.tcgvault.app.ui.theme.TextPrimary
 import com.tcgvault.app.ui.theme.TextSecondary
 import com.tcgvault.app.ui.theme.VaultEmerald
 import com.tcgvault.app.ui.theme.VaultGold
 import com.tcgvault.app.ui.theme.VaultSurface
 import com.tcgvault.app.ui.theme.VaultSurfaceElevated
-import com.tcgvault.app.ui.theme.YugiohAccent
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -77,52 +73,48 @@ fun CollectionScreen(
     var selectedCardId by remember { mutableStateOf<String?>(null) }
     val activeDetail = ownedCards.firstOrNull { it.card.id == selectedCardId }
 
+    val animTotal by animateIntAsState(stats.totalCopies, tween(380), label = "statTotal")
+    val animUnique by animateIntAsState(stats.uniqueCards, tween(380), label = "statUnique")
+    val animPrecons by animateIntAsState(stats.ownedPrecons, tween(380), label = "statPrecons")
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp)
     ) {
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(
-            text = "My Collection",
-            style = MaterialTheme.typography.headlineSmall,
-            color = TextPrimary
-        )
-        Text(
-            text = "100% local on-device storage • No backend required",
-            style = MaterialTheme.typography.labelMedium,
-            color = TextSecondary
-        )
+        Spacer(modifier = Modifier.height(10.dp))
 
-        Spacer(modifier = Modifier.height(12.dp))
-        val animTotal by animateIntAsState(stats.totalCopies, tween(400), label = "statTotal")
-        val animYgo by animateIntAsState(stats.yugiohCopies, tween(400), label = "statYgo")
-        val animMtg by animateIntAsState(stats.mtgCopies, tween(400), label = "statMtg")
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        // Clean terminal-style 3-column metrics strip
+        Surface(
+            color = VaultSurface,
+            shape = RoundedCornerShape(8.dp),
+            border = BorderStroke(1.dp, SubtleBorder),
+            modifier = Modifier.fillMaxWidth()
         ) {
-            StatTile(
-                title = "Total Cards",
-                value = "$animTotal",
-                subtitle = "${stats.uniqueCards} unique",
-                accent = VaultGold,
-                modifier = Modifier.weight(1f)
-            )
-            StatTile(
-                title = "Yu-Gi-Oh!",
-                value = "$animYgo",
-                subtitle = "cards",
-                accent = YugiohAccent,
-                modifier = Modifier.weight(1f)
-            )
-            StatTile(
-                title = "Magic",
-                value = "$animMtg",
-                subtitle = "${stats.ownedPrecons} precons",
-                accent = MtgAccent,
-                modifier = Modifier.weight(1f)
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                MetricCell(
+                    label = "TOTAL CARDS",
+                    value = "$animTotal",
+                    modifier = Modifier.weight(1f)
+                )
+                VerticalDivider(modifier = Modifier.height(28.dp), color = SubtleBorder)
+                MetricCell(
+                    label = "UNIQUE",
+                    value = "$animUnique",
+                    modifier = Modifier.weight(1f)
+                )
+                VerticalDivider(modifier = Modifier.height(28.dp), color = SubtleBorder)
+                MetricCell(
+                    label = "PRECONS",
+                    value = "$animPrecons",
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(10.dp))
@@ -136,25 +128,26 @@ fun CollectionScreen(
         if (ownedCards.isEmpty()) {
             Surface(
                 color = VaultSurface,
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(8.dp),
+                border = BorderStroke(1.dp, SubtleBorder),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 24.dp)
+                    .padding(top = 20.dp)
             ) {
                 Column(
                     modifier = Modifier.padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "Your vault is empty",
+                        text = "No cards collected yet",
                         style = MaterialTheme.typography.titleMedium,
                         color = TextPrimary
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Open any set in the Sets tab and tap a card to add it, or add a Structure Deck / Commander Precon in the Precons tab.",
+                        text = "Open any set and tap a card to add it, or add a precon from the Precons category.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary
+                        color = TextMuted
                     )
                 }
             }
@@ -187,40 +180,29 @@ fun CollectionScreen(
 }
 
 @Composable
-private fun StatTile(
-    title: String,
+private fun MetricCell(
+    label: String,
     value: String,
-    subtitle: String,
-    accent: Color,
     modifier: Modifier = Modifier
 ) {
-    Surface(
-        modifier = modifier,
-        color = VaultSurface,
-        shape = RoundedCornerShape(14.dp),
-        border = BorderStroke(1.dp, accent.copy(alpha = 0.35f))
+    Column(
+        modifier = modifier.padding(horizontal = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelMedium,
-                color = TextSecondary
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = value,
-                style = MaterialTheme.typography.headlineSmall,
-                color = accent,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.labelMedium,
-                color = TextSecondary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
+        Text(
+            text = label,
+            fontFamily = MonoFont,
+            style = MaterialTheme.typography.labelMedium,
+            color = TextMuted
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = value,
+            fontFamily = MonoFont,
+            style = MaterialTheme.typography.headlineSmall,
+            color = TextPrimary,
+            fontWeight = FontWeight.SemiBold
+        )
     }
 }
 
@@ -234,35 +216,32 @@ private fun OwnedCardRow(
 ) {
     val card = item.card
     val rowBorder by animateColorAsState(
-        targetValue = if (card.isFavorite) VaultGold.copy(alpha = 0.75f) else SubtleBorder,
-        animationSpec = tween(240),
+        targetValue = if (card.isFavorite) VaultGold.copy(alpha = 0.55f) else SubtleBorder,
+        animationSpec = tween(220),
         label = "ownedBorder"
     )
 
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(8.dp))
             .clickable(onClick = onClick),
         color = VaultSurface,
-        shape = RoundedCornerShape(14.dp),
-        border = BorderStroke(
-            width = if (card.isFavorite) 1.5.dp else 1.dp,
-            color = rowBorder
-        )
+        shape = RoundedCornerShape(8.dp),
+        border = BorderStroke(1.dp, rowBorder)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(10.dp),
+                .padding(horizontal = 10.dp, vertical = 9.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .width(46.dp)
-                    .height(64.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .width(42.dp)
+                    .height(58.dp)
+                    .clip(RoundedCornerShape(5.dp))
                     .background(VaultSurfaceElevated),
                 contentAlignment = Alignment.Center
             ) {
@@ -282,28 +261,24 @@ private fun OwnedCardRow(
                 Text(
                     text = card.name,
                     style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium,
                     color = TextPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Spacer(modifier = Modifier.height(2.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    GameBadge(game = card.game)
-                    Text(
-                        text = "${item.setCode} • ${card.collectorNumber}",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = VaultGold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+                Text(
+                    text = "${item.setCode} · #${card.collectorNumber}",
+                    fontFamily = MonoFont,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = TextMuted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
                 Text(
                     text = card.rarity,
                     style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Medium,
                     color = rarityColor(card.game, card.rarity),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -317,7 +292,7 @@ private fun OwnedCardRow(
                 FavoriteStarButton(
                     isFavorite = card.isFavorite,
                     onClick = onToggleFavorite,
-                    sizeDp = 28
+                    sizeDp = 26
                 )
                 QuantityStepButton(
                     icon = Icons.Default.Remove,
@@ -325,12 +300,12 @@ private fun OwnedCardRow(
                     onClick = { onAdjust(-1) },
                     enabled = item.ownedQuantity > 0,
                     isPrimary = false,
-                    sizeDp = 30
+                    sizeDp = 28
                 )
                 AnimatedCounterText(
                     count = item.ownedQuantity,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     color = VaultEmerald
                 )
                 QuantityStepButton(
@@ -339,7 +314,7 @@ private fun OwnedCardRow(
                     onClick = { onAdjust(1) },
                     enabled = true,
                     isPrimary = true,
-                    sizeDp = 30
+                    sizeDp = 28
                 )
             }
         }
