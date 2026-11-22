@@ -1,5 +1,6 @@
 package com.tcgvault.app.ui.viewmodel
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -13,6 +14,8 @@ import com.tcgvault.app.data.model.ReleaseDateFilter
 import com.tcgvault.app.data.model.TcgGame
 import com.tcgvault.app.data.remote.AppUpdateInfo
 import com.tcgvault.app.data.remote.GitHubUpdateChecker
+import com.tcgvault.app.data.remote.InAppUpdateInstaller
+import com.tcgvault.app.data.remote.UpdateDownloadState
 import com.tcgvault.app.data.repository.TcgRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -94,6 +97,9 @@ class TcgViewModel(
     private val _availableUpdate = MutableStateFlow<AppUpdateInfo?>(null)
     val availableUpdate: StateFlow<AppUpdateInfo?> = _availableUpdate.asStateFlow()
 
+    private val _updateDownloadState = MutableStateFlow<UpdateDownloadState>(UpdateDownloadState.Idle)
+    val updateDownloadState: StateFlow<UpdateDownloadState> = _updateDownloadState.asStateFlow()
+
     init {
         viewModelScope.launch {
             repository.ensureSeeded()
@@ -108,7 +114,54 @@ class TcgViewModel(
     }
 
     fun dismissUpdateDialog() {
+        if (_updateDownloadState.value is UpdateDownloadState.Downloading) return
         _availableUpdate.value = null
+        _updateDownloadState.value = UpdateDownloadState.Idle
+    }
+
+    fun startInAppUpdate(context: Context) {
+        val update = _availableUpdate.value ?: return
+        if (_updateDownloadState.value is UpdateDownloadState.Downloading) return
+
+        val appContext = context.applicationContext
+        viewModelScope.launch {
+            _updateDownloadState.value = UpdateDownloadState.Downloading(0f)
+            val result = InAppUpdateInstaller.downloadApk(
+                context = appContext,
+                url = update.downloadUrl,
+                version = update.latestVersion,
+                onProgress = { progress ->
+                    _updateDownloadState.value = UpdateDownloadState.Downloading(progress)
+                }
+            )
+            result.onSuccess { apkFile ->
+                val canInstall = InAppUpdateInstaller.canInstallPackages(appContext)
+                _updateDownloadState.value = UpdateDownloadState.ReadyToInstall(
+                    apkFile = apkFile,
+                    needsPermission = !canInstall
+                )
+                if (canInstall) {
+                    InAppUpdateInstaller.launchSystemInstaller(appContext, apkFile)
+                } else {
+                    InAppUpdateInstaller.openInstallPermissionSettings(appContext)
+                }
+            }.onFailure { err ->
+                _updateDownloadState.value = UpdateDownloadState.Error(
+                    err.localizedMessage ?: "Failed to download update"
+                )
+            }
+        }
+    }
+
+    fun triggerDownloadedUpdateInstall(context: Context) {
+        val state = _updateDownloadState.value as? UpdateDownloadState.ReadyToInstall ?: return
+        val appContext = context.applicationContext
+        if (InAppUpdateInstaller.canInstallPackages(appContext)) {
+            _updateDownloadState.value = state.copy(needsPermission = false)
+            InAppUpdateInstaller.launchSystemInstaller(appContext, state.apkFile)
+        } else {
+            InAppUpdateInstaller.openInstallPermissionSettings(appContext)
+        }
     }
 
     private suspend fun syncCatalogInBackground() {
