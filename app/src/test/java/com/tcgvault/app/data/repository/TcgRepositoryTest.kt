@@ -58,6 +58,11 @@ class TcgRepositoryTest {
         assertEquals("Commander", SetCategoryClassifier.categoryFor(TcgGame.MTG, "commander", "Bloomburrow Commander"))
         assertEquals("Masters & Horizons", SetCategoryClassifier.categoryFor(TcgGame.MTG, "draft_innovation", "Modern Horizons 3"))
         assertEquals("Structure & Starter Decks", SetCategoryClassifier.categoryFor(TcgGame.YUGIOH, "Structure Deck", "Structure Deck: Fire Kings"))
+        assertEquals("Structure & Starter Decks", SetCategoryClassifier.categoryFor(TcgGame.YUGIOH, "Booster Set", "Legendary Modern Decks"))
+        assertEquals("Structure & Starter Decks", SetCategoryClassifier.categoryFor(TcgGame.YUGIOH, "Booster Set", "Legendary 5D's Decks"))
+        assertEquals("Structure & Starter Decks", SetCategoryClassifier.categoryFor(TcgGame.YUGIOH, "Booster Set", "Legendary Decks Arc-V"))
+        assertEquals("Legendary Decks", SetCategoryClassifier.yugiohPreconType("Legendary Modern Decks"))
+        assertEquals(null, SetCategoryClassifier.yugiohPreconType("Legendary Duelists: Soulburning Volcano"))
         assertEquals("Tins & Reprint Sets", SetCategoryClassifier.categoryFor(TcgGame.YUGIOH, "Reprint Set", "25th Anniversary Rarity Collection"))
         assertEquals("Booster Sets", SetCategoryClassifier.categoryFor(TcgGame.YUGIOH, "Booster Pack", "Legend of Blue Eyes White Dragon"))
     }

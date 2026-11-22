@@ -53,6 +53,20 @@ object SetCategoryClassifier {
         return UB_KEYWORDS.any { lowerName.contains(it) }
     }
 
+    fun yugiohPreconType(setName: String): String? {
+        val name = setName.trim().lowercase(Locale.US)
+        if (name.contains("deck build pack")) return null
+        return when {
+            name.contains("structure deck") -> "Structure Deck"
+            name.contains("starter deck") || name.contains("starter set") -> "Starter Deck"
+            name.contains("legendary") && name.contains("deck") -> "Legendary Decks"
+            name.contains("egyptian god deck") ||
+                name.contains("tactical-try deck") ||
+                name.contains("chronicle deck") -> "Preconstructed Deck"
+            else -> null
+        }
+    }
+
     fun categoryFor(game: TcgGame, setType: String, setName: String): String {
         val type = setType.trim().lowercase(Locale.US)
         val name = setName.trim().lowercase(Locale.US)
@@ -67,8 +81,11 @@ object SetCategoryClassifier {
             }
 
             TcgGame.YUGIOH -> when {
-                type.contains("structure") || type.contains("starter") ||
-                    name.contains("structure deck") || name.contains("starter deck") -> "Structure & Starter Decks"
+                yugiohPreconType(setName) != null ||
+                    type.contains("structure") ||
+                    type.contains("starter") ||
+                    type.contains("legendary deck") ||
+                    type.contains("preconstructed") -> "Structure & Starter Decks"
                 type.contains("speed duel") || name.contains("speed duel") -> "Speed Duel"
                 type.contains("tin") || type.contains("reprint") ||
                     name.contains("tin") || name.contains("rarity collection") ||

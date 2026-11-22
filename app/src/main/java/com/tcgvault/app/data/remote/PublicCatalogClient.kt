@@ -4,6 +4,7 @@ import com.tcgvault.app.data.local.entity.PreconDeckEntity
 import com.tcgvault.app.data.local.entity.TcgCardEntity
 import com.tcgvault.app.data.local.entity.TcgSetEntity
 import com.tcgvault.app.data.model.ReleaseDateFilter
+import com.tcgvault.app.data.model.SetCategoryClassifier
 import com.tcgvault.app.data.model.TcgGame
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -220,9 +221,9 @@ class PublicCatalogClient {
                 val tcgDate = obj["tcg_date"]?.jsonPrimitive?.contentOrNull ?: continue
                 if (!ReleaseDateFilter.isReleased(tcgDate, todayIso)) continue
 
+                val preconType = SetCategoryClassifier.yugiohPreconType(setName)
                 val setType = when {
-                    setName.contains("Structure Deck", ignoreCase = true) -> "Structure Deck"
-                    setName.contains("Starter Deck", ignoreCase = true) -> "Starter Deck"
+                    preconType != null -> preconType
                     setName.contains("Speed Duel", ignoreCase = true) -> "Speed Duel"
                     setName.contains("Tin", ignoreCase = true) -> "Tin"
                     else -> "Booster Set"
@@ -242,17 +243,17 @@ class PublicCatalogClient {
                     )
                 )
 
-                if (setType == "Structure Deck" || setType == "Starter Deck") {
+                if (preconType != null) {
                     val year = tcgDate.take(4).toIntOrNull() ?: 2024
                     precons.add(
                         PreconDeckEntity(
                             id = "precon:ygo:set:$setCode",
                             game = TcgGame.YUGIOH,
                             name = setName,
-                            category = setType,
+                            category = preconType,
                             releaseYear = year,
                             setCode = setCode,
-                            description = "Official Yu-Gi-Oh! $setType ($numOfCards cards)."
+                            description = "Official Yu-Gi-Oh! $preconType ($numOfCards cards)."
                         )
                     )
                 }
