@@ -4,6 +4,7 @@ import com.tcgvault.app.data.local.seed.OfflineSeedCatalog
 import com.tcgvault.app.data.model.ReleaseDateFilter
 import com.tcgvault.app.data.model.SetCategoryClassifier
 import com.tcgvault.app.data.model.TcgGame
+import com.tcgvault.app.data.remote.PublicCatalogClient
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -69,5 +70,12 @@ class TcgRepositoryTest {
         assertEquals(null, SetCategoryClassifier.yugiohPreconType("Legendary Duelists: Soulburning Volcano"))
         assertEquals("Tins & Reprint Sets", SetCategoryClassifier.categoryFor(TcgGame.YUGIOH, "Reprint Set", "25th Anniversary Rarity Collection"))
         assertEquals("Booster Sets", SetCategoryClassifier.categoryFor(TcgGame.YUGIOH, "Booster Pack", "Legend of Blue Eyes White Dragon"))
+    }
+
+    @Test
+    fun decodeHtmlEntities_cleansYugiohSetNames() {
+        assertEquals("Legendary 5D's Decks", PublicCatalogClient.decodeHtmlEntities("Legendary 5D&apos;s Decks"))
+        assertEquals("The Fallen & The Virtuous", PublicCatalogClient.decodeHtmlEntities("The Fallen &amp; The Virtuous"))
+        assertEquals("Yugi's \"Legendary\" Decks", PublicCatalogClient.decodeHtmlEntities("Yugi&#039;s &quot;Legendary&quot; Decks"))
     }
 }

@@ -214,7 +214,8 @@ class PublicCatalogClient {
 
             for (element in array) {
                 val obj = element.jsonObject
-                val setName = obj["set_name"]?.jsonPrimitive?.contentOrNull ?: continue
+                val rawSetName = obj["set_name"]?.jsonPrimitive?.contentOrNull ?: continue
+                val setName = decodeHtmlEntities(rawSetName)
                 val setCode = obj["set_code"]?.jsonPrimitive?.contentOrNull?.uppercase() ?: continue
                 val numOfCards = obj["num_of_cards"]?.jsonPrimitive?.intOrNull ?: 0
                 if (numOfCards <= 0) continue
@@ -333,7 +334,16 @@ class PublicCatalogClient {
     suspend fun fetchYugiohCardsForSet(set: TcgSetEntity): List<TcgCardEntity> =
         withContext(Dispatchers.IO) {
             val encodedName = URLEncoder.encode(set.name, "UTF-8")
-            val body = get("https://db.ygoprodeck.com/api/v7/cardinfo.php?cardset=$encodedName")
+            val body = runCatching {
+                get("https://db.ygoprodeck.com/api/v7/cardinfo.php?cardset=$encodedName")
+            }.recoverCatching { err ->
+                if (set.name.contains("'")) {
+                    val htmlEncoded = URLEncoder.encode(set.name.replace("'", "&apos;"), "UTF-8")
+                    get("https://db.ygoprodeck.com/api/v7/cardinfo.php?cardset=$htmlEncoded")
+                } else {
+                    throw err
+                }
+            }.getOrThrow()
             val root = json.parseToJsonElement(body).jsonObject
             val data = root["data"]?.jsonArray ?: return@withContext emptyList()
 
@@ -361,7 +371,8 @@ class PublicCatalogClient {
                 }
 
                 val matchingSetInfo = obj["card_sets"]?.jsonArray?.firstOrNull {
-                    it.jsonObject["set_name"]?.jsonPrimitive?.contentOrNull.equals(set.name, ignoreCase = true)
+                    val candidate = it.jsonObject["set_name"]?.jsonPrimitive?.contentOrNull.orEmpty()
+                    decodeHtmlEntities(candidate).equals(set.name, ignoreCase = true)
                 }?.jsonObject
 
                 val collectorNumber = matchingSetInfo?.get("set_code")?.jsonPrimitive?.contentOrNull
@@ -415,5 +426,16 @@ class PublicCatalogClient {
             }
             return response.body?.string().orEmpty()
         }
+    }
+
+    companion object {
+        fun decodeHtmlEntities(raw: String): String = raw
+            .replace("&apos;", "'")
+            .replace("&#039;", "'")
+            .replace("&#39;", "'")
+            .replace("&quot;", "\"")
+            .replace("&lt;", "<")
+            .replace("&gt;", ">")
+            .replace("&amp;", "&")
     }
 }

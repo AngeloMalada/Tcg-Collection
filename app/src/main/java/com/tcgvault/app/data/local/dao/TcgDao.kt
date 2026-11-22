@@ -254,6 +254,26 @@ interface TcgDao {
     @Query("DELETE FROM precon_cards WHERE preconId NOT IN (SELECT id FROM precon_decks)")
     suspend fun pruneOrphanedPreconCards()
 
+    @Query(
+        """
+        UPDATE tcg_sets
+        SET name = REPLACE(REPLACE(REPLACE(REPLACE(name, '&apos;', ''''), '&#039;', ''''), '&quot;', '"'), '&amp;', '&')
+        WHERE name LIKE '%&apos;%' OR name LIKE '%&#039;%' OR name LIKE '%&quot;%' OR name LIKE '%&amp;%'
+        """
+    )
+    suspend fun decodeHtmlEntitiesInSets()
+
+    @Query(
+        """
+        UPDATE precon_decks
+        SET name = REPLACE(REPLACE(REPLACE(REPLACE(name, '&apos;', ''''), '&#039;', ''''), '&quot;', '"'), '&amp;', '&'),
+            description = REPLACE(REPLACE(REPLACE(REPLACE(description, '&apos;', ''''), '&#039;', ''''), '&quot;', '"'), '&amp;', '&')
+        WHERE name LIKE '%&apos;%' OR name LIKE '%&#039;%' OR name LIKE '%&quot;%' OR name LIKE '%&amp;%'
+           OR description LIKE '%&apos;%' OR description LIKE '%&#039;%' OR description LIKE '%&quot;%' OR description LIKE '%&amp;%'
+        """
+    )
+    suspend fun decodeHtmlEntitiesInPrecons()
+
     @Query("UPDATE precon_decks SET deckFileName = :deckFileName WHERE id = :preconId AND (deckFileName IS NULL OR deckFileName = '')")
     suspend fun setPreconDeckFileNameIfMissing(preconId: String, deckFileName: String): Int
 
