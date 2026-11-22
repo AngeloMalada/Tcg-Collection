@@ -86,15 +86,15 @@ class GitHubUpdateChecker(
         fun isNewerVersion(latestVersion: String, currentVersion: String): Boolean {
             val latestParts = parseNumericParts(latestVersion)
             val currentParts = parseNumericParts(currentVersion)
-            if (latestParts.isEmpty() || currentParts.isEmpty()) return false
+            if (latestParts.isEmpty() || currentParts.isEmpty()) return true
 
             val maxLen = maxOf(latestParts.size, currentParts.size)
             for (i in 0 until maxLen) {
                 val l = latestParts.getOrElse(i) { 0 }
                 val c = currentParts.getOrElse(i) { 0 }
-                if (l != c) return l > c
+                if (l != c) return l < c
             }
-            return false
+            return true
         }
 
         private fun parseNumericParts(version: String): List<Int> {
