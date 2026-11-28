@@ -41,13 +41,16 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CollectionsBookmark
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -59,6 +62,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -96,13 +101,12 @@ import java.net.URLEncoder
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.dark(AndroidColor.TRANSPARENT),
-            navigationBarStyle = SystemBarStyle.dark(AndroidColor.TRANSPARENT)
-        )
         val app = application as TcgVaultApp
+        applySystemBars(app.isLightMode())
         setContent {
-            TcgVaultTheme {
+            var lightMode by remember { mutableStateOf(app.isLightMode()) }
+            LaunchedEffect(lightMode) { applySystemBars(lightMode) }
+            TcgVaultTheme(lightMode = lightMode) {
                 val vm: TcgViewModel = viewModel(
                     factory = TcgViewModel.Factory(
                         repository = app.repository,
@@ -110,9 +114,26 @@ class MainActivity : ComponentActivity() {
                         onGamePersisted = app::saveLastSelectedGame
                     )
                 )
-                TcgVaultRoot(viewModel = vm)
+                TcgVaultRoot(
+                    viewModel = vm,
+                    lightMode = lightMode,
+                    onToggleLightMode = {
+                        lightMode = !lightMode
+                        app.saveLightMode(lightMode)
+                    }
+                )
             }
         }
+    }
+
+    /** Status/navigation bar icons must be dark on the light theme and light on the dark one. */
+    private fun applySystemBars(lightMode: Boolean) {
+        val style = if (lightMode) {
+            SystemBarStyle.light(AndroidColor.TRANSPARENT, AndroidColor.TRANSPARENT)
+        } else {
+            SystemBarStyle.dark(AndroidColor.TRANSPARENT)
+        }
+        enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
     }
 }
 
@@ -122,7 +143,11 @@ private enum class TopLevelTab(val route: String, val label: String, val icon: I
 }
 
 @Composable
-private fun TcgVaultRoot(viewModel: TcgViewModel) {
+private fun TcgVaultRoot(
+    viewModel: TcgViewModel,
+    lightMode: Boolean,
+    onToggleLightMode: () -> Unit
+) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -185,25 +210,34 @@ private fun TcgVaultRoot(viewModel: TcgViewModel) {
                                 selected = selectedGame,
                                 onSelect = viewModel::selectGame
                             )
-                            AnimatedVisibility(
-                                visible = isSyncing,
-                                enter = fadeIn(tween(200)),
-                                exit = fadeOut(tween(250))
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                AnimatedVisibility(
+                                    visible = isSyncing,
+                                    enter = fadeIn(tween(200)),
+                                    exit = fadeOut(tween(250))
                                 ) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(12.dp),
-                                        strokeWidth = 1.6.dp,
-                                        color = TextMuted
-                                    )
-                                    Text(
-                                        text = "SYNC",
-                                        fontFamily = MonoFont,
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = TextMuted
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(12.dp),
+                                            strokeWidth = 1.6.dp,
+                                            color = TextMuted
+                                        )
+                                        Text(
+                                            text = "SYNC",
+                                            fontFamily = MonoFont,
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = TextMuted
+                                        )
+                                    }
+                                }
+                                IconButton(onClick = onToggleLightMode) {
+                                    Icon(
+                                        imageVector = if (lightMode) Icons.Default.DarkMode else Icons.Default.LightMode,
+                                        contentDescription = if (lightMode) "Switch to dark mode" else "Switch to light mode",
+                                        tint = TextSecondary
                                     )
                                 }
                             }

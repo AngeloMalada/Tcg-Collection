@@ -102,7 +102,21 @@ interface TcgDao {
 
     // --- Cards ---
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsertCards(cards: List<TcgCardEntity>)
+    suspend fun upsertCardsRaw(cards: List<TcgCardEntity>)
+
+    @Query("SELECT id FROM tcg_cards WHERE isFavorite = 1 AND id IN (:cardIds)")
+    suspend fun getFavoriteCardIds(cardIds: List<String>): List<String>
+
+    /**
+     * Inserts or refreshes catalog cards without losing the user's favourite flag:
+     * freshly fetched cards always arrive with isFavorite = false.
+     */
+    @Transaction
+    suspend fun upsertCards(cards: List<TcgCardEntity>) {
+        // Chunked to stay under SQLite's bound-parameter limit on older Android versions.
+        val favoriteIds = cards.map { it.id }.chunked(500).flatMap { getFavoriteCardIds(it) }.toSet()
+        upsertCardsRaw(cards.map { if (it.id in favoriteIds) it.copy(isFavorite = true) else it })
+    }
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertCardsIgnore(cards: List<TcgCardEntity>)

@@ -65,7 +65,9 @@ abstract class TcgDatabase : RoomDatabase() {
                     "tcg_vault_local.db"
                 )
                     .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
-                    .fallbackToDestructiveMigration()
+                    // Never wipe user data on upgrade: a schema change without a migration
+                    // should fail loudly in testing rather than silently erase collections.
+                    .fallbackToDestructiveMigrationOnDowngrade()
                     .build()
                     .also { INSTANCE = it }
             }
