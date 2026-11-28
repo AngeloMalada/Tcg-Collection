@@ -46,6 +46,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -77,32 +78,40 @@ import com.tcgvault.app.ui.theme.VaultAccentWhite
 import com.tcgvault.app.ui.theme.VaultBackground
 import com.tcgvault.app.ui.theme.VaultEmerald
 import com.tcgvault.app.ui.theme.VaultGold
+import com.tcgvault.app.ui.theme.LocalVaultPalette
 import com.tcgvault.app.ui.theme.VaultSurface
 import com.tcgvault.app.ui.theme.VaultSurfaceElevated
 import com.tcgvault.app.ui.theme.YugiohAccent
 
+@Composable
+@ReadOnlyComposable
 fun gameAccentColor(game: TcgGame): Color = when (game) {
     TcgGame.YUGIOH -> YugiohAccent
     TcgGame.MTG -> MtgAccent
 }
 
+@Composable
+@ReadOnlyComposable
 fun rarityColor(game: TcgGame, rarity: String): Color {
     val r = rarity.trim().lowercase()
+    // Light mode uses deeper shades so pale rarity colours stay readable on white.
+    val light = LocalVaultPalette.current.isLight
+    fun pick(dark: Long, onLight: Long) = Color(if (light) onLight else dark)
     return when (game) {
         TcgGame.MTG -> when {
-            r.contains("mythic") -> Color(0xFFF06428)     // Mythic Orange-Red
-            r.contains("rare") -> Color(0xFFE5B94C)       // Rare Gold
-            r.contains("uncommon") -> Color(0xFFA8C2D8)   // Uncommon Silver
-            r.contains("special") || r.contains("bonus") || r.contains("timeshifted") -> Color(0xFFB884FF)
-            else -> Color(0xFFD4D4D8)                     // Common Light Gray
+            r.contains("mythic") -> pick(0xFFF06428, 0xFFDC4A12)     // Mythic Orange-Red
+            r.contains("rare") -> pick(0xFFE5B94C, 0xFFB7791F)       // Rare Gold
+            r.contains("uncommon") -> pick(0xFFA8C2D8, 0xFF5B7A94)   // Uncommon Silver
+            r.contains("special") || r.contains("bonus") || r.contains("timeshifted") -> pick(0xFFB884FF, 0xFF8B5CF6)
+            else -> pick(0xFFD4D4D8, 0xFF71717A)                     // Common Gray
         }
 
         TcgGame.YUGIOH -> when {
-            r.contains("quarter century") || r.contains("starlight") || r.contains("ghost") -> Color(0xFF7CE8FF)
-            r.contains("secret") || r.contains("collector") || r.contains("ultimate") -> Color(0xFFC084FC)
-            r.contains("ultra") -> Color(0xFFE5B94C)
-            r.contains("super") -> Color(0xFF93C5FD)
-            r.contains("rare") -> Color(0xFFD4D4D8)
+            r.contains("quarter century") || r.contains("starlight") || r.contains("ghost") -> pick(0xFF7CE8FF, 0xFF0891B2)
+            r.contains("secret") || r.contains("collector") || r.contains("ultimate") -> pick(0xFFC084FC, 0xFF9333EA)
+            r.contains("ultra") -> pick(0xFFE5B94C, 0xFFB7791F)
+            r.contains("super") -> pick(0xFF93C5FD, 0xFF2563EB)
+            r.contains("rare") -> pick(0xFFD4D4D8, 0xFF52525B)
             else -> TextMuted
         }
     }

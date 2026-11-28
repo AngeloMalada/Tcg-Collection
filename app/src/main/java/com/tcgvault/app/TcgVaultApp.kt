@@ -24,6 +24,12 @@ class TcgVaultApp : Application(), ImageLoaderFactory {
         prefs.edit().putString("selected_game", game.name).apply()
     }
 
+    fun isLightMode(): Boolean = prefs.getBoolean("light_mode", false)
+
+    fun saveLightMode(enabled: Boolean) {
+        prefs.edit().putBoolean("light_mode", enabled).apply()
+    }
+
     override fun newImageLoader(): ImageLoader {
         val okHttpClient = OkHttpClient.Builder()
             .followRedirects(true)
