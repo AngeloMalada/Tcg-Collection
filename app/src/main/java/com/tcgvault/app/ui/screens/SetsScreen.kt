@@ -41,6 +41,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.tcgvault.app.data.local.model.PreconCardDetail
 import com.tcgvault.app.data.local.model.PreconWithSummary
@@ -81,7 +82,8 @@ fun SetsScreen(
     onRemovePreconFromCollection: (String) -> Unit,
     onCreateCustomPrecon: (String, TcgGame, String, Int, String, Boolean) -> Unit,
     onToggleSetFavorite: (String) -> Unit,
-    onTogglePreconFavorite: (String) -> Unit
+    onTogglePreconFavorite: (String) -> Unit,
+    bottomContentPadding: Dp = 24.dp
 ) {
     var inspectedPrecon by remember { mutableStateOf<PreconWithSummary?>(null) }
     var showCreatePreconDialog by remember { mutableStateOf(false) }
@@ -228,7 +230,7 @@ fun SetsScreen(
             LazyColumn(
                 state = listState,
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(bottom = 24.dp)
+                contentPadding = PaddingValues(bottom = bottomContentPadding)
             ) {
                 visibleSetGroups.forEach { (category, categorySets) ->
                     item(key = "header:$category") {

@@ -39,6 +39,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.tcgvault.app.data.local.model.CardWithCollection
@@ -68,7 +69,8 @@ fun CollectionScreen(
     query: String,
     onQueryChange: (String) -> Unit,
     onAdjustQuantity: (String, Int) -> Unit,
-    onToggleCardFavorite: (String) -> Unit
+    onToggleCardFavorite: (String) -> Unit,
+    bottomContentPadding: Dp = 24.dp
 ) {
     var selectedCardId by remember { mutableStateOf<String?>(null) }
     val activeDetail = ownedCards.firstOrNull { it.card.id == selectedCardId }
@@ -154,7 +156,7 @@ fun CollectionScreen(
         } else {
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(bottom = 24.dp)
+                contentPadding = PaddingValues(bottom = bottomContentPadding)
             ) {
                 items(ownedCards, key = { it.card.id }) { item ->
                     OwnedCardRow(

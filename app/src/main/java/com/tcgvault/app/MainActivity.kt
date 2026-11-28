@@ -14,13 +14,23 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import com.tcgvault.app.ui.components.FloatingNavBar
+import com.tcgvault.app.ui.components.FloatingNavBarBottomMargin
+import com.tcgvault.app.ui.components.FloatingNavBarHeight
+import com.tcgvault.app.ui.components.FloatingNavItem
+import com.tcgvault.app.ui.components.gameAccentColor
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -28,7 +38,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CollectionsBookmark
@@ -154,10 +163,12 @@ private fun TcgVaultRoot(viewModel: TcgViewModel) {
     }
 
     val showChrome = TopLevelTab.entries.any { it.route == currentRoute }
+    val navItems = remember {
+        TopLevelTab.entries.map { FloatingNavItem(key = it.route, label = it.label, icon = it.icon) }
+    }
 
     Scaffold(
         containerColor = VaultBackground,
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             if (showChrome) {
                 Surface(color = VaultBackground) {
@@ -201,62 +212,20 @@ private fun TcgVaultRoot(viewModel: TcgViewModel) {
                     }
                 }
             }
-        },
-        bottomBar = {
-            if (showChrome) {
-                Surface(color = VaultBackground) {
-                    Column {
-                        HorizontalDivider(color = SubtleBorder)
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .navigationBarsPadding()
-                                .padding(vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            TopLevelTab.entries.forEach { tab ->
-                                val selected = currentRoute == tab.route
-                                Row(
-                                    modifier = Modifier
-                                        .clickable {
-                                            if (!selected) {
-                                                navController.navigate(tab.route) {
-                                                    popUpTo(TopLevelTab.SETS.route) { saveState = true }
-                                                    launchSingleTop = true
-                                                    restoreState = true
-                                                }
-                                            }
-                                        }
-                                        .padding(horizontal = 24.dp, vertical = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Center
-                                ) {
-                                    Icon(
-                                        imageVector = tab.icon,
-                                        contentDescription = tab.label,
-                                        tint = if (selected) VaultAccentWhite else TextMuted,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(7.dp))
-                                    Text(
-                                        text = tab.label,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                                        color = if (selected) TextPrimary else TextMuted
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
         }
     ) { innerPadding ->
+        // The floating nav bar overlays content, so top-level screens extend to the
+        // bottom edge and pad their lists instead; detail screens keep the system inset.
+        val navInsetBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+        val floatingBarClearance = FloatingNavBarHeight + FloatingNavBarBottomMargin + navInsetBottom + 16.dp
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(VaultBackground)
-                .padding(innerPadding)
+                .padding(
+                    top = innerPadding.calculateTopPadding(),
+                    bottom = if (showChrome) 0.dp else innerPadding.calculateBottomPadding()
+                )
         ) {
             NavHost(
                 navController = navController,
@@ -289,7 +258,8 @@ private fun TcgVaultRoot(viewModel: TcgViewModel) {
                         onRemovePreconFromCollection = viewModel::removePreconFromCollection,
                         onCreateCustomPrecon = viewModel::createCustomPrecon,
                         onToggleSetFavorite = viewModel::toggleSetFavorite,
-                        onTogglePreconFavorite = viewModel::togglePreconFavorite
+                        onTogglePreconFavorite = viewModel::togglePreconFavorite,
+                        bottomContentPadding = floatingBarClearance
                     )
                 }
 
@@ -329,8 +299,55 @@ private fun TcgVaultRoot(viewModel: TcgViewModel) {
                         query = collectionQuery,
                         onQueryChange = viewModel::updateCollectionQuery,
                         onAdjustQuantity = viewModel::adjustCardQuantity,
-                        onToggleCardFavorite = viewModel::toggleCardFavorite
+                        onToggleCardFavorite = viewModel::toggleCardFavorite,
+                        bottomContentPadding = floatingBarClearance
                     )
+                }
+            }
+
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+            ) {
+                SnackbarHost(
+                    hostState = snackbarHostState,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+                AnimatedVisibility(
+                    visible = showChrome,
+                    enter = fadeIn(tween(200)) + slideInVertically(tween(260)) { it },
+                    exit = fadeOut(tween(150)) + slideOutVertically(tween(200)) { it }
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                Brush.verticalGradient(
+                                    0f to Color.Transparent,
+                                    0.55f to VaultBackground.copy(alpha = 0.85f),
+                                    1f to VaultBackground
+                                )
+                            )
+                            .navigationBarsPadding()
+                            .padding(top = 28.dp, bottom = FloatingNavBarBottomMargin),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        FloatingNavBar(
+                            items = navItems,
+                            selectedKey = currentRoute,
+                            accent = gameAccentColor(selectedGame),
+                            onSelect = { item ->
+                                if (item.key != currentRoute) {
+                                    navController.navigate(item.key) {
+                                        popUpTo(TopLevelTab.SETS.route) { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                }
+                            }
+                        )
+                    }
                 }
             }
         }
