@@ -1,0 +1,46 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#09090B"
+        android:pathData="M54,6a48,48 0,1 1,0 96a48,48 0,1 1,0 -96z" />
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:scaleX="1.12"
+        android:scaleY="1.12"
+        android:translateY="1">
+        <!-- Back-left card -->
+        <group android:pivotX="54" android:pivotY="82" android:rotation="-18">
+            <path
+                android:fillColor="#3F3F46"
+                android:strokeColor="#09090B"
+                android:strokeWidth="2"
+                android:pathData="M45,35h18a4,4 0,0 1,4 4v30a4,4 0,0 1,-4 4h-18a4,4 0,0 1,-4 -4v-30a4,4 0,0 1,4 -4z" />
+        </group>
+        <!-- Back-right card -->
+        <group android:pivotX="54" android:pivotY="82" android:rotation="18">
+            <path
+                android:fillColor="#22C55E"
+                android:strokeColor="#09090B"
+                android:strokeWidth="2"
+                android:pathData="M45,35h18a4,4 0,0 1,4 4v30a4,4 0,0 1,-4 4h-18a4,4 0,0 1,-4 -4v-30a4,4 0,0 1,4 -4z" />
+        </group>
+        <!-- Front card -->
+        <path
+            android:fillColor="#FAFAFA"
+            android:strokeColor="#09090B"
+            android:strokeWidth="2"
+            android:pathData="M45,33h18a4,4 0,0 1,4 4v30a4,4 0,0 1,-4 4h-18a4,4 0,0 1,-4 -4v-30a4,4 0,0 1,4 -4z" />
+        <path
+            android:strokeColor="#2E09090B"
+            android:strokeWidth="1.2"
+            android:pathData="M46.5,36.5h15a2,2 0,0 1,2 2v27a2,2 0,0 1,-2 2h-15a2,2 0,0 1,-2 -2v-27a2,2 0,0 1,2 -2z" />
+        <!-- Foil sparkle -->
+        <path
+            android:fillColor="#22C55E"
+            android:pathData="M54,43Q55,51 62,52Q55,53 54,61Q53,53 46,52Q53,51 54,43z" />
+    </group>
+</vector>
