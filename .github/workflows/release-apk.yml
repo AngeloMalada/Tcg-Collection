@@ -36,7 +36,7 @@ jobs:
       - name: Build Debug and Release APKs
         run: ./gradlew assembleDebug assembleRelease
 
-      - name: Prepare APK artifacts
+      - name: Sign release APK
         id: prepare
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -49,38 +49,42 @@ jobs:
           VERSION_TAG="${VERSION_TAG#release-}"
           SAFE_TAG=$(echo "$VERSION_TAG" | tr '/ ' '--')
 
-          mkdir -p dist
-          cp app/build/outputs/apk/debug/app-debug.apk "dist/tcgvault-${SAFE_TAG}-debug.apk"
-
-          RELEASE_APK="app/build/outputs/apk/release/app-release-unsigned.apk"
-          if [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
-            echo "$KEYSTORE_BASE64" | base64 --decode > release.keystore
-            APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -n 1)
-            "$APKSIGNER" sign \
-              --ks release.keystore \
-              --ks-pass env:KEYSTORE_PASSWORD \
-              --ks-key-alias "$KEY_ALIAS" \
-              --key-pass env:KEY_PASSWORD \
-              --out "dist/tcgvault-${SAFE_TAG}-release.apk" \
-              "$RELEASE_APK"
-            rm -f release.keystore
-          else
-            cp "$RELEASE_APK" "dist/tcgvault-${SAFE_TAG}-release-unsigned.apk"
+          # Unsigned APKs cannot be installed, so never publish one.
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
+            echo "::error::Signing secrets missing. Add KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS and KEY_PASSWORD in Settings > Secrets and variables > Actions."
+            exit 1
           fi
+
+          mkdir -p dist/release dist/debug
+          cp app/build/outputs/apk/debug/app-debug.apk "dist/debug/TCG-Collection-Tracker-${SAFE_TAG}-debug.apk"
+
+          echo "$KEYSTORE_BASE64" | base64 --decode > release.keystore
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -n 1)
+          "$APKSIGNER" sign \
+            --ks release.keystore \
+            --ks-pass env:KEYSTORE_PASSWORD \
+            --ks-key-alias "$KEY_ALIAS" \
+            --key-pass env:KEY_PASSWORD \
+            --out "dist/release/TCG-Collection-Tracker-${SAFE_TAG}.apk" \
+            app/build/outputs/apk/release/app-release-unsigned.apk
+          rm -f release.keystore
+          "$APKSIGNER" verify --print-certs "dist/release/TCG-Collection-Tracker-${SAFE_TAG}.apk"
 
           echo "tag=${SAFE_TAG}" >> "$GITHUB_OUTPUT"
 
-      - name: Upload APK workflow artifact
+      - name: Upload APK workflow artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: tcgvault-${{ steps.prepare.outputs.tag }}-apk
-          path: dist/*.apk
+          name: tcg-collection-tracker-${{ steps.prepare.outputs.tag }}-apk
+          path: dist/**/*.apk
 
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/release-')
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.prepare.outputs.tag }}
-          name: TCG Vault ${{ steps.prepare.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: TCG Collection Tracker ${{ steps.prepare.outputs.tag }}
           generate_release_notes: true
-          files: dist/*.apk
+          # Only the signed APK: the in-app updater downloads the first .apk it finds.
+          files: dist/release/*.apk
